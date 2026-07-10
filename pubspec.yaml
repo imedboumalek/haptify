@@ -1,0 +1,23 @@
+name: haptify
+description: >-
+  Type-safe, composable haptic pattern authoring. Define patterns once in
+  Dart, export to AHAP (iOS Core Haptics) and Android waveforms or primitives.
+version: 0.1.0
+repository: https://github.com/imedboumalek/haptify
+issue_tracker: https://github.com/imedboumalek/haptify/issues
+topics:
+  - haptics
+  - vibration
+  - ahap
+  - core-haptics
+
+environment:
+  sdk: ^3.4.0
+
+dependencies:
+  meta: ^1.12.0
+
+dev_dependencies:
+  collection: ^1.18.0
+  lints: ^5.0.0
+  test: ^1.25.0
