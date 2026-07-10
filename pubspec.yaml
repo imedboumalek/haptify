@@ -1,7 +1,7 @@
 name: haptify
 description: >-
-  Type-safe, composable haptic pattern authoring. Define patterns once in
-  Dart, export to AHAP (iOS Core Haptics) and Android waveforms or primitives.
+  Generate haptic feedback files from audio: .ahap for iOS Core Haptics plus
+  Android waveforms, via a CLI or a composable Dart pattern API.
 version: 0.1.0
 repository: https://github.com/imedboumalek/haptify
 issue_tracker: https://github.com/imedboumalek/haptify/issues
