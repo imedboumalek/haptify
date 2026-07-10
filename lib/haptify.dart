@@ -5,6 +5,8 @@
 /// the playback plugin you already use.
 library;
 
+export 'src/dsl/combinators.dart';
+export 'src/dsl/duration_ext.dart';
 export 'src/model/haptic_curve.dart';
 export 'src/model/haptic_envelope.dart';
 export 'src/model/haptic_event.dart';
