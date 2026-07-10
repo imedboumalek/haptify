@@ -1,21 +1,76 @@
 # haptify
 
-Type-safe, composable haptic pattern authoring for Dart and Flutter.
+Generate haptic feedback files from audio, in pure Dart.
 
-**Author once, play anywhere** — define a haptic pattern in a small Dart DSL
-and export it to:
+Point haptify at the sound effects in your Flutter project's assets and it
+produces haptic patterns that follow the audio — transient taps at every
+percussive hit, continuous rumbles tracing the loudness envelope. The
+generated files are consumed by the playback plugins you already use; haptify
+itself has no platform channels.
 
-- **AHAP JSON** for iOS Core Haptics (lossless)
-- **Android waveforms** for `VibrationEffect.createWaveform`
-- **Android primitive compositions** for `VibrationEffect.Composition` *(planned)*
+```
+$ haptify convert assets/audio/*.wav
+assets/audio/explosion.wav -> explosion.ahap, explosion.haptic.json, explosion_haptic.dart
+assets/audio/tap.wav -> tap.ahap, tap.haptic.json, tap_haptic.dart
+```
 
-haptify is a pure Dart package: no platform channels, no Flutter dependency.
-It produces *data* that you hand to the playback plugin you already use —
-[gaimon](https://pub.dev/packages/gaimon),
-[vibration](https://pub.dev/packages/vibration), or
-[advanced_haptics](https://pub.dev/packages/advanced_haptics).
+## Outputs
 
-## Quick start
+| File | Format | Play it with |
+|---|---|---|
+| `<name>.ahap` | Apple Core Haptics (AHAP JSON) | [gaimon](https://pub.dev/packages/gaimon): `Gaimon.pattern(ahapString)`, or [core_haptics](https://pub.dev/packages/core_haptics) |
+| `<name>.haptic.json` | `{"timings": [...], "amplitudes": [...], "repeat": -1}` | [vibration](https://pub.dev/packages/vibration): `Vibration.vibrate(pattern: timings, intensities: amplitudes)` |
+| `<name>_haptic.dart` | Dart constants (AHAP string + waveform arrays) | Compile the pattern into your app — no asset loading at runtime |
+
+## Install
+
+```
+dart pub global activate haptify
+```
+
+Or run it from a checkout with `dart run haptify:haptify`.
+
+**Audio formats:** WAV decodes natively. MP3 (and anything else) is converted
+through `ffmpeg` — or `afconvert`, preinstalled on macOS — when available on
+the PATH.
+
+## Usage
+
+```
+haptify convert <audio files...> [options]
+
+-o, --out                  Directory for generated files
+-f, --formats              ahap, waveform, dart (default: all three)
+    --resolution           Analysis frame / waveform step in ms (default 10)
+    --onset-sensitivity    Transient detection threshold; lower finds more
+                           taps (default 1.5)
+    --min-gap              Minimum ms between transients (default 50)
+    --curve-points         Max intensity-curve points per segment (default 32)
+    --gamma                Envelope exponent; <1.0 boosts quiet passages
+                           (default 1.0)
+    --silence-threshold    Level under which audio counts as silence
+                           (default 0.02)
+-v, --verbose              Print analysis details and conversion warnings
+```
+
+## How it works
+
+1. **Decode** the audio to mono samples.
+2. **Analyze**: an RMS loudness envelope is computed per frame; energy-flux
+   onset detection finds percussive hits; the zero-crossing rate estimates
+   how *sharp* each moment feels.
+3. **Model**: hits become transient haptic events, sustained passages become
+   continuous events shaped by an intensity curve (simplified with
+   Ramer-Douglas-Peucker to stay compact).
+4. **Encode**: the same pattern is written as lossless AHAP for iOS and
+   sampled into a 0-255 amplitude waveform for Android. Anything Android
+   cannot express (sharpness, non-intensity curves) is reported as a
+   warning, never an error.
+
+## Using haptify as a library
+
+The pattern model, DSL, analyzer, and encoders are a plain Dart API, so you
+can also author patterns by hand or build your own tooling:
 
 ```dart
 import 'package:haptify/haptify.dart';
@@ -23,59 +78,26 @@ import 'package:haptify/haptify.dart';
 final tap = HapticPattern.events([
   HapticEvent.transient(at: Duration.zero, intensity: 1.0, sharpness: 0.6),
 ]);
-
 final rumble = HapticPattern.events([
   HapticEvent.continuous(
     at: Duration.zero,
     duration: 400.ms,
     intensity: 0.8,
-    sharpness: 0.2,
     envelope: HapticEnvelope(attack: 50.ms, release: 100.ms),
   ),
-], curves: [
-  HapticCurve.intensity([
-    CurvePoint(Duration.zero, 0.3),
-    CurvePoint(400.ms, 1.0),
-  ]),
 ]);
-
 final combo = tap.then(rumble, gap: 80.ms).repeat(3, gap: 200.ms);
 
-// iOS (Core Haptics via gaimon):
-final ahap = combo.toAhap();
-// Gaimon.pattern(ahap);
-
-// Android (via vibration):
-final wf = combo.toWaveform();
-// Vibration.vibrate(pattern: wf.timings, intensities: wf.amplitudes);
+final ahap = combo.toAhap();          // iOS
+final wf = combo.toWaveform();        // Android: wf.timings, wf.amplitudes
 ```
 
-## Pairing with playback plugins
+Or run the audio pipeline programmatically:
 
-| Plugin | Usage |
-|---|---|
-| [gaimon](https://pub.dev/packages/gaimon) | `Gaimon.pattern(pattern.toAhap())` |
-| [vibration](https://pub.dev/packages/vibration) | `Vibration.vibrate(pattern: wf.timings, intensities: wf.amplitudes)` |
-| [advanced_haptics](https://pub.dev/packages/advanced_haptics) | `AdvancedHaptics.playWaveform(wf.timings, wf.amplitudes)` |
-
-## Lossiness
-
-AHAP export is lossless. Android exports are approximations — Android has no
-sharpness axis, and waveforms sample the intensity envelope at a fixed
-resolution. Lossy conversions never throw; they return a result carrying
-`warnings` describing what was approximated or dropped, so you can assert
-`wf.warnings.isEmpty` in tests if you care.
-
-## Roadmap
-
-- Android primitive compositions (`toPrimitives`)
-- AHAP parsing (`HapticPattern.fromAhap`) — convert existing `.ahap` files to
-  Android waveforms
-- Easing/curve preset library
-- Optional Flutter companion package with playback glue
-
-Audio-to-haptic generation and playback itself (platform channels) are out of
-scope: haptify authors patterns, your playback plugin plays them.
+```dart
+final audio = await const AudioDecoder().decodeFile('assets/audio/hit.wav');
+final pattern = const AudioAnalyzer().analyze(audio);
+```
 
 ## License
 
