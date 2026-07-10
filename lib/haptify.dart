@@ -6,6 +6,7 @@
 library;
 
 export 'src/dsl/combinators.dart';
+export 'src/encoders/ahap/ahap_encoder.dart';
 export 'src/dsl/duration_ext.dart';
 export 'src/model/haptic_curve.dart';
 export 'src/model/haptic_envelope.dart';
