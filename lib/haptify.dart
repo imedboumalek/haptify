@@ -5,6 +5,8 @@
 /// the playback plugin you already use.
 library;
 
+export 'src/audio/audio_data.dart';
+export 'src/audio/decoder.dart';
 export 'src/conversion_warning.dart';
 export 'src/dsl/combinators.dart';
 export 'src/encoders/ahap/ahap_encoder.dart';

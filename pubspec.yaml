@@ -14,8 +14,14 @@ topics:
 environment:
   sdk: ^3.4.0
 
+executables:
+  haptify:
+
 dependencies:
+  args: ^2.5.0
   meta: ^1.12.0
+  path: ^1.9.0
+  wav: ^1.5.0
 
 dev_dependencies:
   collection: ^1.18.0
