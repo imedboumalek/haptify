@@ -5,8 +5,11 @@
 /// the playback plugin you already use.
 library;
 
+export 'src/conversion_warning.dart';
 export 'src/dsl/combinators.dart';
 export 'src/encoders/ahap/ahap_encoder.dart';
+export 'src/encoders/waveform/android_waveform.dart';
+export 'src/encoders/waveform/waveform_encoder.dart';
 export 'src/dsl/duration_ext.dart';
 export 'src/model/haptic_curve.dart';
 export 'src/model/haptic_envelope.dart';
