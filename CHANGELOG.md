@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0-dev.2
+
+- Restore the roadmap section in the README (primitive compositions, AHAP
+  parsing, presets, Flutter companion).
+- Add a tag-triggered GitHub Actions workflow that publishes to pub.dev.
+
 ## 0.2.0-dev.1
 
 Dev preview — APIs and output details may still change before a stable
