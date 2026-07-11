@@ -132,6 +132,20 @@ final audio = await const AudioDecoder().decodeFile('assets/audio/hit.wav');
 final pattern = const AudioAnalyzer().analyze(audio);
 ```
 
+## Roadmap
+
+- Android primitive compositions (`VibrationEffect.Composition`) as a fourth
+  output format for richer haptics on API 30+ devices
+- AHAP parsing (`HapticPattern.fromAhap`) — convert existing `.ahap` files
+  to Android waveforms without re-analyzing audio
+- Preset patterns and an easing/curve library for hand-authoring
+- Optional Flutter companion package with playback glue for
+  gaimon / vibration
+
+Audio-to-haptic generation is built in; playback itself (platform channels)
+stays out of scope: haptify authors patterns, your playback plugin plays
+them.
+
 ## License
 
 MIT
