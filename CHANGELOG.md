@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0
+
+- Built-in MP3 decoding in pure Dart (vendored minimp3 port) — ffmpeg is no
+  longer required for MP3 input. Handles ID3v2 tags and trims LAME encoder
+  delay/padding so haptic timing matches the original audio.
+- Expanded installation instructions (global activation, dev dependency,
+  per-platform ffmpeg setup for other formats).
+
 ## 0.1.0
 
 - Initial release.

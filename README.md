@@ -22,17 +22,43 @@ assets/audio/tap.wav -> tap.ahap, tap.haptic.json, tap_haptic.dart
 | `<name>.haptic.json` | `{"timings": [...], "amplitudes": [...], "repeat": -1}` | [vibration](https://pub.dev/packages/vibration): `Vibration.vibrate(pattern: timings, intensities: amplitudes)` |
 | `<name>_haptic.dart` | Dart constants (AHAP string + waveform arrays) | Compile the pattern into your app — no asset loading at runtime |
 
-## Install
+## Installation
 
-```
+### As a global command (recommended)
+
+```sh
 dart pub global activate haptify
+
+haptify convert assets/audio/*.wav
 ```
 
-Or run it from a checkout with `dart run haptify:haptify`.
+If your shell cannot find `haptify` afterwards, add pub's bin directory to
+your `PATH`:
 
-**Audio formats:** WAV decodes natively. MP3 (and anything else) is converted
-through `ffmpeg` — or `afconvert`, preinstalled on macOS — when available on
-the PATH.
+- macOS/Linux: `export PATH="$PATH:$HOME/.pub-cache/bin"` (add it to your
+  `~/.zshrc` or `~/.bashrc`)
+- Windows: add `%LOCALAPPDATA%\Pub\Cache\bin`
+
+### As a project dev dependency
+
+```sh
+dart pub add dev:haptify        # or: flutter pub add dev:haptify
+
+dart run haptify:haptify convert assets/audio/*.wav
+```
+
+This pins the version in your pubspec so everyone on the team generates
+identical haptic files.
+
+### Audio format support
+
+WAV and MP3 decode natively in pure Dart — no external tools needed. Other
+formats (M4A, OGG, FLAC, ...) are converted through `ffmpeg` — or
+`afconvert`, preinstalled on macOS — when available on the PATH:
+
+- macOS: `brew install ffmpeg` (or rely on the built-in `afconvert`)
+- Debian/Ubuntu: `sudo apt install ffmpeg`
+- Windows: `winget install ffmpeg`
 
 ## Usage
 
@@ -55,7 +81,9 @@ haptify convert <audio files...> [options]
 
 ## How it works
 
-1. **Decode** the audio to mono samples.
+1. **Decode** the audio to mono samples (MP3 decoding is built in via a
+   vendored Dart port of the minimp3 reference decoder, with ID3 handling
+   and LAME gapless trimming so timing matches the original audio).
 2. **Analyze**: an RMS loudness envelope is computed per frame; energy-flux
    onset detection finds percussive hits; the zero-crossing rate estimates
    how *sharp* each moment feels.
