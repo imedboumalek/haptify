@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 import 'package:wav/wav.dart';
 
 import 'audio_data.dart';
+import 'mp3.dart';
 
 /// Thrown when an audio file cannot be decoded.
 class AudioDecodeException implements Exception {
@@ -19,9 +20,9 @@ class AudioDecodeException implements Exception {
 
 /// Decodes audio files into mono [AudioData].
 ///
-/// WAV files are decoded in pure Dart. Other formats (MP3 and anything else
-/// the converters understand) are converted to WAV through `ffmpeg` or, on
-/// macOS, `afconvert` — whichever is installed.
+/// WAV and MP3 files are decoded in pure Dart. Other formats (and MP3 files
+/// the built-in decoder cannot handle) are converted to WAV through `ffmpeg`
+/// or, on macOS, `afconvert` — whichever is installed.
 class AudioDecoder {
   /// Creates a decoder.
   const AudioDecoder();
@@ -35,10 +36,20 @@ class AudioDecoder {
     if (!file.existsSync()) {
       throw AudioDecodeException('File not found: $path');
     }
-    if (p.extension(path).toLowerCase() == '.wav') {
-      return _decodeWav(path);
+    switch (p.extension(path).toLowerCase()) {
+      case '.wav':
+        return _decodeWav(path);
+      case '.mp3':
+        try {
+          return decodeMp3Bytes(file.readAsBytesSync());
+        } on AudioDecodeException {
+          // Unusual stream the built-in decoder cannot handle; an external
+          // converter may still manage it.
+          return _decodeViaConversion(path);
+        }
+      default:
+        return _decodeViaConversion(path);
     }
-    return _decodeViaConversion(path);
   }
 
   Future<AudioData> _decodeWav(String path) async {
