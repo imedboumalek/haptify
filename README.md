@@ -2,6 +2,11 @@
 
 Generate haptic feedback files from audio, in pure Dart.
 
+> **Dev preview.** haptify is published as a prerelease: the CLI and library
+> APIs work end-to-end but may still change before 1.0. Bug reports and
+> feedback are very welcome on the
+> [issue tracker](https://github.com/imedboumalek/haptify/issues).
+
 Point haptify at the sound effects in your Flutter project's assets and it
 produces haptic patterns that follow the audio — transient taps at every
 percussive hit, continuous rumbles tracing the loudness envelope. The
