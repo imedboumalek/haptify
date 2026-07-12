@@ -8,8 +8,9 @@ void main() {
   testWidgets(
     'lists every sound in assets/audio with its pregenerated haptics',
     (tester) async {
-      // testWidgets gives us a binding whose rootBundle serves the app's assets.
-      final samples = await loadBundledSamples();
+      // Loading the asset manifest is real async I/O, so it has to run inside
+      // runAsync rather than the default fake-async zone.
+      final samples = (await tester.runAsync(loadBundledSamples))!;
 
       expect(samples, isNotEmpty);
       final names = samples.map((s) => s.name).toList();
@@ -30,7 +31,16 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(const HaptifyDemoApp());
-    await tester.pumpAndSettle();
+    // The list loads from assets via real I/O (not fake-async timers), so turn
+    // the real event loop, then pump until the loaded samples appear.
+    await tester.runAsync(loadBundledSamples);
+    for (
+      var i = 0;
+      i < 20 && find.text('Explosion 01').evaluate().isEmpty;
+      i++
+    ) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
 
     expect(find.text('Bundled samples'), findsOneWidget);
     // Samples come from the sorted asset manifest, so Explosion 01 is first.

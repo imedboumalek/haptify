@@ -215,6 +215,11 @@ class _DemoPageState extends State<DemoPage> {
   List<Sample> _samples = const <Sample>[];
   bool _loadingSamples = true;
 
+  /// Accordion state: the sample whose tile is currently open, plus a
+  /// controller per tile so opening one can collapse the previous.
+  String? _expandedId;
+  final Map<String, ExpansibleController> _tileControllers = {};
+
   /// Identifies the track whose visualizers are currently live (a sample name
   /// or `'upload'`), and its intensity envelope. Null when nothing plays.
   String? _activeId;
@@ -263,6 +268,20 @@ class _DemoPageState extends State<DemoPage> {
     });
   }
 
+  /// Accordion behaviour: opening a tile collapses whichever one was open.
+  void _onSampleExpanded(String name, bool expanded) {
+    if (!expanded) {
+      // Ignore the collapse we trigger ourselves on the previous tile.
+      if (_expandedId == name) _expandedId = null;
+      return;
+    }
+    final previous = _expandedId;
+    _expandedId = name;
+    if (previous != null && previous != name) {
+      _tileControllers[previous]?.collapse();
+    }
+  }
+
   @override
   void dispose() {
     _tick?.cancel();
@@ -272,6 +291,9 @@ class _DemoPageState extends State<DemoPage> {
     _player.dispose();
     _progress.dispose();
     _zeroProgress.dispose();
+    for (final c in _tileControllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -489,6 +511,12 @@ class _DemoPageState extends State<DemoPage> {
                 clipBehavior: Clip.antiAlias,
                 child: ExpansionTile(
                   key: PageStorageKey(sample.name),
+                  controller: _tileControllers.putIfAbsent(
+                    sample.name,
+                    ExpansibleController.new,
+                  ),
+                  onExpansionChanged: (expanded) =>
+                      _onSampleExpanded(sample.name, expanded),
                   leading: IconButton(
                     tooltip: _activeId == sample.name ? 'Stop' : 'Play',
                     icon: Icon(
