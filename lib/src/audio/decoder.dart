@@ -1,28 +1,21 @@
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
-import 'package:wav/wav.dart';
 
 import 'audio_data.dart';
-import 'mp3.dart';
+import 'bytes_decoder.dart';
 
-/// Thrown when an audio file cannot be decoded.
-class AudioDecodeException implements Exception {
-  /// Creates the exception with a human-readable [message].
-  AudioDecodeException(this.message);
-
-  /// Why decoding failed and, where possible, what to do about it.
-  final String message;
-
-  @override
-  String toString() => 'AudioDecodeException: $message';
-}
+export 'audio_data.dart' show AudioDecodeException;
 
 /// Decodes audio files into mono [AudioData].
 ///
 /// WAV and MP3 files are decoded in pure Dart. Other formats (and MP3 files
 /// the built-in decoder cannot handle) are converted to WAV through `ffmpeg`
 /// or, on macOS, `afconvert` — whichever is installed.
+///
+/// To decode audio already in memory (a user upload, a network download),
+/// use [decodeAudioBytes] instead — it needs no filesystem and works on
+/// every platform including web.
 class AudioDecoder {
   /// Creates a decoder.
   const AudioDecoder();
@@ -36,46 +29,17 @@ class AudioDecoder {
     if (!file.existsSync()) {
       throw AudioDecodeException('File not found: $path');
     }
-    switch (p.extension(path).toLowerCase()) {
-      case '.wav':
-        return _decodeWav(path);
-      case '.mp3':
-        try {
-          return decodeMp3Bytes(file.readAsBytesSync());
-        } on AudioDecodeException {
-          // Unusual stream the built-in decoder cannot handle; an external
-          // converter may still manage it.
-          return _decodeViaConversion(path);
-        }
-      default:
+    final extension = p.extension(path).toLowerCase();
+    if (extension == '.wav' || extension == '.mp3') {
+      try {
+        return decodeAudioBytes(file.readAsBytesSync());
+      } on AudioDecodeException {
+        // Unusual stream the built-in decoders cannot handle; an external
+        // converter may still manage it.
         return _decodeViaConversion(path);
-    }
-  }
-
-  Future<AudioData> _decodeWav(String path) async {
-    final Wav wav;
-    try {
-      wav = await Wav.readFile(path);
-    } catch (e) {
-      throw AudioDecodeException('Could not parse WAV file $path: $e');
-    }
-    if (wav.channels.isEmpty || wav.channels.first.isEmpty) {
-      throw AudioDecodeException('WAV file $path contains no audio');
-    }
-
-    // Downmix to mono by averaging the channels.
-    final length = wav.channels.first.length;
-    final mono = List<double>.filled(length, 0);
-    for (final channel in wav.channels) {
-      for (var i = 0; i < length && i < channel.length; i++) {
-        mono[i] += channel[i];
       }
     }
-    final channelCount = wav.channels.length;
-    for (var i = 0; i < length; i++) {
-      mono[i] = (mono[i] / channelCount).clamp(-1.0, 1.0);
-    }
-    return AudioData(samples: mono, sampleRate: wav.samplesPerSecond);
+    return _decodeViaConversion(path);
   }
 
   /// Converts [path] to a temporary WAV file with an external tool, then
@@ -94,7 +58,7 @@ class AudioDecoder {
           '$path to WAV first.',
         );
       }
-      return await _decodeWav(wavPath);
+      return decodeAudioBytes(File(wavPath).readAsBytesSync());
     } finally {
       await tempDir.delete(recursive: true);
     }

@@ -1,5 +1,17 @@
 import 'package:meta/meta.dart';
 
+/// Thrown when audio cannot be decoded.
+class AudioDecodeException implements Exception {
+  /// Creates the exception with a human-readable [message].
+  AudioDecodeException(this.message);
+
+  /// Why decoding failed and, where possible, what to do about it.
+  final String message;
+
+  @override
+  String toString() => 'AudioDecodeException: $message';
+}
+
 /// Decoded audio: mono samples in `[-1, 1]` at a fixed sample rate.
 @immutable
 class AudioData {

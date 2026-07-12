@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
 
@@ -6,6 +7,7 @@ import '../model/haptic_curve.dart';
 import '../model/haptic_event.dart';
 import '../model/haptic_pattern.dart';
 import 'audio_data.dart';
+import 'bytes_decoder.dart';
 
 /// Tuning knobs for [AudioAnalyzer].
 @immutable
@@ -53,6 +55,23 @@ class AudioAnalyzer {
 
   /// The tuning knobs used by [analyze].
   final AnalysisOptions options;
+
+  /// Decodes in-memory audio [bytes] and analyzes them into a haptic
+  /// pattern in one step.
+  ///
+  /// This is the entry point for audio loaded at runtime — a user upload, a
+  /// network download, a bundled asset. WAV and MP3 are supported; [format]
+  /// is detected from the leading bytes when omitted. Throws an
+  /// [AudioDecodeException] when the bytes are not a supported format.
+  ///
+  /// ```dart
+  /// final bytes = await pickedFile.readAsBytes(); // Uint8List
+  /// final pattern = const AudioAnalyzer().analyzeBytes(bytes);
+  /// final ahap = pattern.toAhap();          // iOS (gaimon / Core Haptics)
+  /// final wf = pattern.toWaveform();        // Android (vibration)
+  /// ```
+  HapticPattern analyzeBytes(Uint8List bytes, {AudioFormat? format}) =>
+      analyze(decodeAudioBytes(bytes, format: format));
 
   /// Analyzes [audio] into a haptic pattern.
   HapticPattern analyze(AudioData audio) {

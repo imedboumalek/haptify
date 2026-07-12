@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import '../third_party/minimp3/minimp3.dart' as minimp3;
 import 'audio_data.dart';
-import 'decoder.dart';
 
 /// Decodes an MP3 file's bytes into mono [AudioData] in pure Dart.
 ///
