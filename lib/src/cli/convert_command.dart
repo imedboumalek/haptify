@@ -7,11 +7,14 @@ import 'package:path/path.dart' as p;
 import '../audio/analyzer.dart';
 import '../audio/decoder.dart';
 import '../encoders/ahap/ahap_encoder.dart';
+import '../encoders/primitives/primitives_encoder.dart';
 import '../encoders/waveform/waveform_encoder.dart';
+import '../model/haptic_pattern.dart';
 import '../output/dart_source.dart';
 
-/// The audio file extensions picked up when scanning a folder for inputs.
-const Set<String> _audioExtensions = {
+/// The file extensions picked up when scanning a folder for inputs: audio
+/// files plus existing `.ahap` patterns (converted without re-analysis).
+const Set<String> _inputExtensions = {
   '.wav',
   '.mp3',
   '.m4a',
@@ -20,6 +23,7 @@ const Set<String> _audioExtensions = {
   '.flac',
   '.aif',
   '.aiff',
+  '.ahap',
 };
 
 /// `haptify convert`: turns audio files into haptic files.
@@ -38,9 +42,10 @@ class ConvertCommand extends Command<int> {
       ..addMultiOption(
         'formats',
         abbr: 'f',
-        allowed: ['ahap', 'waveform', 'dart'],
+        allowed: ['ahap', 'waveform', 'primitives', 'dart'],
         defaultsTo: ['ahap', 'waveform', 'dart'],
-        help: 'Which outputs to generate per audio file.',
+        help: 'Which outputs to generate per input file. "primitives" emits '
+            'VibrationEffect.Composition JSON for API 30+ Android devices.',
       )
       ..addOption(
         'resolution',
@@ -91,10 +96,10 @@ class ConvertCommand extends Command<int> {
 
   @override
   String get description =>
-      'Generate haptic files (.ahap, waveform JSON, Dart constants) '
-      'from audio files.\n'
+      'Generate haptic files (.ahap, waveform JSON, composition JSON, Dart '
+      'constants) from audio files or existing .ahap patterns.\n'
       'Inputs may be files, globs, or folders; with no input, the current '
-      'directory is scanned for audio files.';
+      'directory is scanned for convertible files.';
 
   @override
   String get invocation => 'haptify convert [audio files, globs, or folders]';
@@ -105,9 +110,9 @@ class ConvertCommand extends Command<int> {
     final inputs = _expandInputs(args.rest);
     if (inputs.isEmpty) {
       usageException(args.rest.isEmpty
-          ? 'No audio files (${_audioExtensions.join(', ')}) found in the '
-              'current directory.'
-          : 'No audio files matched the given inputs.');
+          ? 'No convertible files (${_inputExtensions.join(', ')}) found in '
+              'the current directory.'
+          : 'No convertible files matched the given inputs.');
     }
 
     final formats = args.multiOption('formats').toSet();
@@ -143,6 +148,9 @@ class ConvertCommand extends Command<int> {
       } on AudioDecodeException catch (e) {
         stderr.writeln('error: $input: ${e.message}');
         failures++;
+      } on FormatException catch (e) {
+        stderr.writeln('error: $input: ${e.message}');
+        failures++;
       }
     }
 
@@ -161,8 +169,16 @@ class ConvertCommand extends Command<int> {
     required Duration resolution,
     required bool verbose,
   }) async {
-    final audio = await const AudioDecoder().decodeFile(input);
-    final pattern = AudioAnalyzer(options: options).analyze(audio);
+    final HapticPattern pattern;
+    Duration? audioDuration;
+    if (p.extension(input).toLowerCase() == '.ahap') {
+      // Existing patterns convert directly, without audio analysis.
+      pattern = HapticPattern.fromAhap(File(input).readAsStringSync());
+    } else {
+      final audio = await const AudioDecoder().decodeFile(input);
+      audioDuration = audio.duration;
+      pattern = AudioAnalyzer(options: options).analyze(audio);
+    }
     if (pattern.isEmpty) {
       stderr.writeln('warning: $input: only silence detected; skipping.');
       return;
@@ -191,6 +207,14 @@ class ConvertCommand extends Command<int> {
         const JsonEncoder.withIndent('  ').convert(waveform.toJson()),
       );
     }
+    if (formats.contains('primitives')) {
+      write(
+        'primitives',
+        '$baseName.primitives.json',
+        const JsonEncoder.withIndent('  ')
+            .convert(pattern.toPrimitives().toJson()),
+      );
+    }
     if (formats.contains('dart')) {
       write(
         'dart',
@@ -209,7 +233,8 @@ class ConvertCommand extends Command<int> {
       '${written.map((w) => p.relative(w)).join(', ')}',
     );
     if (verbose) {
-      stdout.writeln('  ${audio.duration} of audio, '
+      stdout.writeln(
+          '  ${audioDuration != null ? '$audioDuration of audio, ' : ''}'
           '${pattern.events.length} events, '
           '${pattern.curves.length} curves');
       for (final warning in waveform.warnings) {
@@ -276,7 +301,7 @@ class ConvertCommand extends Command<int> {
         .whereType<File>()
         .map((f) => f.path)
         .where(
-          (path) => _audioExtensions.contains(p.extension(path).toLowerCase()),
+          (path) => _inputExtensions.contains(p.extension(path).toLowerCase()),
         )
         .toList()
       ..sort();
