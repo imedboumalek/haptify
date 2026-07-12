@@ -60,7 +60,13 @@ class ConvertCommand extends Command<int> {
       ..addOption(
         'curve-points',
         defaultsTo: '32',
-        help: 'Maximum intensity-curve control points per segment.',
+        help: 'Minimum intensity-curve control points per segment.',
+      )
+      ..addOption(
+        'curve-rate',
+        defaultsTo: '16',
+        help: 'Intensity-curve points per second of audio; keeps envelope '
+            'detail in long sounds. 0 makes --curve-points a hard cap.',
       )
       ..addOption(
         'gamma',
@@ -116,6 +122,8 @@ class ConvertCommand extends Command<int> {
       minOnsetGap:
           Duration(milliseconds: _intArg(args.option('min-gap')!, 'min-gap')),
       maxCurvePoints: _intArg(args.option('curve-points')!, 'curve-points'),
+      curvePointsPerSecond:
+          _doubleArg(args.option('curve-rate')!, 'curve-rate'),
       gamma: _doubleArg(args.option('gamma')!, 'gamma'),
       silenceThreshold:
           _doubleArg(args.option('silence-threshold')!, 'silence-threshold'),
