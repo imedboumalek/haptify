@@ -26,11 +26,14 @@ flutter run          # with a phone connected
 
 ## Regenerate the bundled haptics
 
-From the repository root, after changing the analyzer or encoders:
+From `example_app/`, after changing the analyzer or encoders:
 
 ```sh
-dart run haptify:haptify convert --formats dart -o example_app/lib/generated "example_app/assets/audio/*.mp3"
-dart run haptify:haptify convert --formats ahap,waveform -o example_app/assets/haptics "example_app/assets/audio/*.mp3"
+dart run haptify:haptify convert --formats dart assets/audio
+dart run haptify:haptify convert --formats ahap,waveform -o assets/haptics assets/audio
 ```
+
+(The Dart sources land in `lib/generated/` by default; the `-o` keeps the
+ahap/waveform files in `assets/haptics/` where the app bundles them.)
 
 Sound licensing: see `assets/audio/README.md` (CC0, from OpenGameArt).

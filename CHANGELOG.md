@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.0-dev.4
+
+- CLI: inputs may now be folders, and running `haptify convert` with no
+  input scans the current directory for audio files.
+- CLI: new default output layout — outputs group by type under
+  `<source folder>/haptify-output/` (`ahap/`, `waveform/`), and Dart sources
+  go to `lib/generated/` so they are importable straight away. An explicit
+  `--out` directory still receives everything flat.
+- CLI: generated Dart file names are sanitized to
+  `lower_case_with_underscores` (`piano-loop.wav` →
+  `piano_loop_haptic.dart`), keeping the `file_names` lint happy.
+
 ## 0.2.0-dev.3
 
 - Convert audio loaded at runtime: `decodeAudioBytes(bytes)` and

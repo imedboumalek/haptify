@@ -68,9 +68,10 @@ formats (M4A, OGG, FLAC, ...) are converted through `ffmpeg` — or
 ## Usage
 
 ```
-haptify convert <audio files...> [options]
+haptify convert [audio files, globs, or folders] [options]
 
--o, --out                  Directory for generated files
+-o, --out                  Put all generated files flat into one directory
+                           (default: grouped layout, see below)
 -f, --formats              ahap, waveform, dart (default: all three)
     --resolution           Analysis frame / waveform step in ms (default 10)
     --onset-sensitivity    Transient detection threshold; lower finds more
@@ -83,6 +84,23 @@ haptify convert <audio files...> [options]
                            (default 0.02)
 -v, --verbose              Print analysis details and conversion warnings
 ```
+
+Inputs can be files, globs, or folders (scanned for audio files); with no
+input at all, the current directory is scanned. Run bare `haptify convert`
+inside a sounds folder and everything in it converts.
+
+By default the outputs are grouped by type next to the sources, with Dart
+sources going to `lib/generated/` (relative to where you run the command,
+i.e. your project root) so they are immediately importable:
+
+```
+assets/audio/hit.wav
+assets/audio/haptify-output/ahap/hit.ahap
+assets/audio/haptify-output/waveform/hit.haptic.json
+lib/generated/hit_haptic.dart
+```
+
+Pass `-o some/dir` to put everything flat into one directory instead.
 
 ## How it works
 
