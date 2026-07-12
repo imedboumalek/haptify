@@ -1,4 +1,4 @@
-import 'dart:io' show Platform;
+import 'dart:io' show Directory, File, Platform;
 import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart';
@@ -140,6 +140,8 @@ class _DemoPageState extends State<DemoPage> {
 
   bool _converting = false;
   String? _uploadName;
+  Uint8List? _uploadBytes;
+  String? _uploadTempPath;
   ConversionResult? _result;
   String? _error;
 
@@ -147,6 +149,37 @@ class _DemoPageState extends State<DemoPage> {
   void dispose() {
     _player.dispose();
     super.dispose();
+  }
+
+  /// Plays the uploaded audio itself: straight from bytes on Android; via a
+  /// temp file on iOS, where audioplayers has no byte-source support.
+  Future<void> _playUploadSound() async {
+    final bytes = _uploadBytes;
+    if (bytes == null) return;
+    await _player.stop();
+    if (Platform.isAndroid) {
+      await _player.play(BytesSource(bytes));
+      return;
+    }
+    if (_uploadTempPath == null) {
+      final extension = _uploadName!.toLowerCase().endsWith('.wav')
+          ? 'wav'
+          : 'mp3';
+      final path = '${Directory.systemTemp.path}/haptify_upload.$extension';
+      await File(path).writeAsBytes(bytes, flush: true);
+      _uploadTempPath = path;
+    }
+    await _player.play(DeviceFileSource(_uploadTempPath!));
+  }
+
+  void _playUploadHaptic() {
+    final result = _result;
+    if (result == null) return;
+    playHaptic(
+      ahap: result.ahap,
+      timings: result.timings,
+      amplitudes: result.amplitudes,
+    );
   }
 
   Future<void> _playSample(Sample sample) async {
@@ -173,6 +206,8 @@ class _DemoPageState extends State<DemoPage> {
     setState(() {
       _converting = true;
       _uploadName = file.name;
+      _uploadBytes = bytes;
+      _uploadTempPath = null;
       _result = null;
       _error = null;
     });
@@ -237,11 +272,12 @@ class _DemoPageState extends State<DemoPage> {
             _ResultCard(
               name: _uploadName ?? 'upload',
               result: result,
-              onPlay: () => playHaptic(
-                ahap: result.ahap,
-                timings: result.timings,
-                amplitudes: result.amplitudes,
-              ),
+              onPlayBoth: () {
+                _playUploadSound();
+                _playUploadHaptic();
+              },
+              onPlayHaptic: _playUploadHaptic,
+              onPlaySound: _playUploadSound,
             ),
         ],
       ),
@@ -301,12 +337,16 @@ class _ResultCard extends StatelessWidget {
   const _ResultCard({
     required this.name,
     required this.result,
-    required this.onPlay,
+    required this.onPlayBoth,
+    required this.onPlayHaptic,
+    required this.onPlaySound,
   });
 
   final String name;
   final ConversionResult result;
-  final VoidCallback onPlay;
+  final VoidCallback onPlayBoth;
+  final VoidCallback onPlayHaptic;
+  final VoidCallback onPlaySound;
 
   @override
   Widget build(BuildContext context) {
@@ -334,10 +374,26 @@ class _ResultCard extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 12),
-            FilledButton.tonalIcon(
-              onPressed: onPlay,
-              icon: const Icon(Icons.vibration),
-              label: const Text('Play haptic'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.icon(
+                  onPressed: onPlayBoth,
+                  icon: const Icon(Icons.play_arrow),
+                  label: const Text('Sound + haptic'),
+                ),
+                FilledButton.tonalIcon(
+                  onPressed: onPlayHaptic,
+                  icon: const Icon(Icons.vibration),
+                  label: const Text('Haptic only'),
+                ),
+                FilledButton.tonalIcon(
+                  onPressed: onPlaySound,
+                  icon: const Icon(Icons.volume_up),
+                  label: const Text('Sound only'),
+                ),
+              ],
             ),
           ],
         ),
