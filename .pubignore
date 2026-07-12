@@ -1,0 +1,12 @@
+# .pubignore replaces .gitignore for publishing, so repeat its entries.
+.dart_tool/
+.packages
+build/
+pubspec.lock
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# The Flutter demo app is for local testing only; keep the package lean.
+example_app/
