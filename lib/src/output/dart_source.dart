@@ -25,6 +25,23 @@ String dartIdentifierFor(String filePath) {
   return identifier;
 }
 
+/// Derives a `lower_case_with_underscores` Dart file name from a source
+/// file name, e.g. `piano-loop.wav` → `piano_loop_haptic.dart`.
+String dartFileNameFor(String filePath) {
+  final words = p
+      .basenameWithoutExtension(filePath)
+      .split(RegExp('[^a-zA-Z0-9]+'))
+      .where((word) => word.isNotEmpty)
+      .map((word) => word.toLowerCase())
+      .toList();
+  if (words.isEmpty) return 'haptic.dart';
+  var base = words.join('_');
+  if (RegExp('^[0-9]').hasMatch(base)) {
+    base = 'haptic_$base';
+  }
+  return '${base}_haptic.dart';
+}
+
 /// Generates a standalone Dart source file holding a haptic pattern as
 /// constants: the AHAP document for iOS playback plus waveform arrays for
 /// Android. The generated file has no dependencies.

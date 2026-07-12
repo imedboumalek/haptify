@@ -10,6 +10,18 @@ import '../encoders/ahap/ahap_encoder.dart';
 import '../encoders/waveform/waveform_encoder.dart';
 import '../output/dart_source.dart';
 
+/// The audio file extensions picked up when scanning a folder for inputs.
+const Set<String> _audioExtensions = {
+  '.wav',
+  '.mp3',
+  '.m4a',
+  '.aac',
+  '.ogg',
+  '.flac',
+  '.aif',
+  '.aiff',
+};
+
 /// `haptify convert`: turns audio files into haptic files.
 class ConvertCommand extends Command<int> {
   /// Creates the command and its flags.
@@ -18,8 +30,9 @@ class ConvertCommand extends Command<int> {
       ..addOption(
         'out',
         abbr: 'o',
-        help: 'Directory for generated files. '
-            'Defaults to each input file\'s directory.',
+        help: 'Put all generated files flat into this directory. By default '
+            'outputs are grouped by type under <source folder>/haptify-output '
+            '(ahap/, waveform/), with Dart sources in lib/generated/.',
       )
       ..addMultiOption(
         'formats',
@@ -72,17 +85,22 @@ class ConvertCommand extends Command<int> {
   @override
   String get description =>
       'Generate haptic files (.ahap, waveform JSON, Dart constants) '
-      'from audio files.';
+      'from audio files.\n'
+      'Inputs may be files, globs, or folders; with no input, the current '
+      'directory is scanned for audio files.';
 
   @override
-  String get invocation => 'haptify convert <audio files...>';
+  String get invocation => 'haptify convert [audio files, globs, or folders]';
 
   @override
   Future<int> run() async {
     final args = argResults!;
     final inputs = _expandInputs(args.rest);
     if (inputs.isEmpty) {
-      usageException('No input audio files given.');
+      usageException(args.rest.isEmpty
+          ? 'No audio files (${_audioExtensions.join(', ')}) found in the '
+              'current directory.'
+          : 'No audio files matched the given inputs.');
     }
 
     final formats = args.multiOption('formats').toSet();
@@ -101,10 +119,6 @@ class ConvertCommand extends Command<int> {
       silenceThreshold:
           _doubleArg(args.option('silence-threshold')!, 'silence-threshold'),
     );
-
-    if (outDir != null) {
-      Directory(outDir).createSync(recursive: true);
-    }
 
     var failures = 0;
     for (final input in inputs) {
@@ -145,37 +159,46 @@ class ConvertCommand extends Command<int> {
       return;
     }
 
-    final directory = outDir ?? p.dirname(input);
     final baseName = p.basenameWithoutExtension(input);
     final written = <String>[];
 
     final ahap = pattern.toAhap();
     final waveform = pattern.toWaveform(resolution: resolution);
 
-    if (formats.contains('ahap')) {
-      final path = p.join(directory, '$baseName.ahap');
-      File(path).writeAsStringSync(ahap);
-      written.add(path);
-    }
-    if (formats.contains('waveform')) {
-      final path = p.join(directory, '$baseName.haptic.json');
-      File(path).writeAsStringSync(
-        const JsonEncoder.withIndent('  ').convert(waveform.toJson()),
-      );
-      written.add(path);
-    }
-    if (formats.contains('dart')) {
-      final path = p.join(directory, '${baseName.toLowerCase()}_haptic.dart');
-      File(path).writeAsStringSync(generateDartSource(
-        identifier: dartIdentifierFor(input),
-        sourceFileName: p.basename(input),
-        ahap: pattern.toAhap(pretty: false),
-        waveform: waveform,
-      ));
+    void write(String format, String fileName, String contents) {
+      final path = _outputPath(input, format, outDir, fileName);
+      File(path).parent.createSync(recursive: true);
+      File(path).writeAsStringSync(contents);
       written.add(path);
     }
 
-    stdout.writeln('$input -> ${written.map(p.basename).join(', ')}');
+    if (formats.contains('ahap')) {
+      write('ahap', '$baseName.ahap', ahap);
+    }
+    if (formats.contains('waveform')) {
+      write(
+        'waveform',
+        '$baseName.haptic.json',
+        const JsonEncoder.withIndent('  ').convert(waveform.toJson()),
+      );
+    }
+    if (formats.contains('dart')) {
+      write(
+        'dart',
+        dartFileNameFor(input),
+        generateDartSource(
+          identifier: dartIdentifierFor(input),
+          sourceFileName: p.basename(input),
+          ahap: pattern.toAhap(pretty: false),
+          waveform: waveform,
+        ),
+      );
+    }
+
+    stdout.writeln(
+      '${p.relative(input)} -> '
+      '${written.map((w) => p.relative(w)).join(', ')}',
+    );
     if (verbose) {
       stdout.writeln('  ${audio.duration} of audio, '
           '${pattern.events.length} events, '
@@ -186,13 +209,51 @@ class ConvertCommand extends Command<int> {
     }
   }
 
-  /// Expands `*`/`?` glob patterns in the file name part of each argument,
-  /// for shells that pass them through unexpanded.
+  /// Where the [format] output named [fileName] for [input] goes.
+  ///
+  /// An explicit [outDir] receives everything flat. Otherwise outputs are
+  /// grouped by type under `<source folder>/haptify-output/`, except Dart
+  /// sources, which go to `lib/generated/` so they are importable from a
+  /// Dart or Flutter project run from its root.
+  static String _outputPath(
+    String input,
+    String format,
+    String? outDir,
+    String fileName,
+  ) {
+    if (outDir != null) return p.join(outDir, fileName);
+    if (format == 'dart') return p.join('lib', 'generated', fileName);
+    return p.join(p.dirname(input), 'haptify-output', format, fileName);
+  }
+
+  /// Resolves the raw arguments into audio file paths.
+  ///
+  /// Arguments may be files, folders (scanned for audio files), or `*`/`?`
+  /// glob patterns in the file name part, for shells that pass them through
+  /// unexpanded. With no arguments, the current directory is scanned.
   List<String> _expandInputs(List<String> raw) {
+    List<String> audioFilesIn(Directory directory) => directory
+        .listSync()
+        .whereType<File>()
+        .map((f) => f.path)
+        .where(
+          (path) => _audioExtensions.contains(p.extension(path).toLowerCase()),
+        )
+        .toList()
+      ..sort();
+
+    if (raw.isEmpty) {
+      return audioFilesIn(Directory.current);
+    }
+
     final inputs = <String>[];
     for (final arg in raw) {
       if (!arg.contains('*') && !arg.contains('?')) {
-        inputs.add(arg);
+        if (FileSystemEntity.isDirectorySync(arg)) {
+          inputs.addAll(audioFilesIn(Directory(arg)));
+        } else {
+          inputs.add(arg);
+        }
         continue;
       }
       final directory = Directory(
