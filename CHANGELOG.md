@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.3.0-dev.1
+
+Accuracy fixes for long and complex sounds:
+
+- **Fixed AHAP curve timing on iOS**: parameter-curve control point times
+  are now encoded relative to the curve's start, per the Core Haptics spec.
+  Curves that started after t=0 — every segment after the first in a long
+  sound — previously played with doubled time offsets.
+- Intensity-curve point budgets now scale with segment length
+  (`--curve-rate`, default 16 points/second), so long uploads keep their
+  envelope detail instead of being crushed into 32 points; the RDP
+  simplifier binary-searches its tolerance to use the full budget.
+- Android waveform amplitudes are sampled at step midpoints, removing the
+  half-step lag that dulled ramps.
+
+Roadmap features:
+
+- Android primitive compositions: `pattern.toPrimitives()` and the
+  `--formats primitives` CLI output map patterns onto
+  `VibrationEffect.Composition` primitives (click/tick/thud/rises/falls/
+  spin) with scales, delays, and a `minApiLevel`.
+- AHAP parsing: `HapticPattern.fromAhap` tolerantly parses `.ahap` files,
+  and the CLI accepts them as inputs — convert existing iOS haptic
+  libraries to Android formats without re-analyzing audio.
+
 ## 0.2.0-dev.4
 
 - CLI: inputs may now be folders, and running `haptify convert` with no

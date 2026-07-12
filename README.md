@@ -25,7 +25,12 @@ assets/audio/tap.wav -> tap.ahap, tap.haptic.json, tap_haptic.dart
 |---|---|---|
 | `<name>.ahap` | Apple Core Haptics (AHAP JSON) | [gaimon](https://pub.dev/packages/gaimon): `Gaimon.pattern(ahapString)`, or [core_haptics](https://pub.dev/packages/core_haptics) |
 | `<name>.haptic.json` | `{"timings": [...], "amplitudes": [...], "repeat": -1}` | [vibration](https://pub.dev/packages/vibration): `Vibration.vibrate(pattern: timings, intensities: amplitudes)` |
+| `<name>.primitives.json` | `VibrationEffect.Composition` primitives (opt-in via `--formats primitives`) | Your own platform channel calling `Composition.addPrimitive` on API 30+ devices |
 | `<name>_haptic.dart` | Dart constants (AHAP string + waveform arrays) | Compile the pattern into your app — no asset loading at runtime |
+
+Inputs don't have to be audio: an existing `.ahap` file converts straight to
+the Android formats (`haptify convert pattern.ahap`), with no re-analysis —
+handy for porting an iOS haptic library to Android.
 
 ## Installation
 
@@ -72,12 +77,16 @@ haptify convert [audio files, globs, or folders] [options]
 
 -o, --out                  Put all generated files flat into one directory
                            (default: grouped layout, see below)
--f, --formats              ahap, waveform, dart (default: all three)
+-f, --formats              ahap, waveform, primitives, dart
+                           (default: ahap, waveform, dart)
     --resolution           Analysis frame / waveform step in ms (default 10)
     --onset-sensitivity    Transient detection threshold; lower finds more
                            taps (default 1.5)
     --min-gap              Minimum ms between transients (default 50)
-    --curve-points         Max intensity-curve points per segment (default 32)
+    --curve-points         Minimum intensity-curve points per segment
+                           (default 32)
+    --curve-rate           Intensity-curve points per second of audio, which
+                           keeps envelope detail in long sounds (default 16)
     --gamma                Envelope exponent; <1.0 boosts quiet passages
                            (default 1.0)
     --silence-threshold    Level under which audio counts as silence
@@ -187,10 +196,10 @@ with `cd example_app && flutter run`.
 
 ## Roadmap
 
-- Android primitive compositions (`VibrationEffect.Composition`) as a fourth
-  output format for richer haptics on API 30+ devices
-- AHAP parsing (`HapticPattern.fromAhap`) — convert existing `.ahap` files
-  to Android waveforms without re-analyzing audio
+- ~~Android primitive compositions (`VibrationEffect.Composition`)~~ —
+  shipped as the `primitives` output format
+- ~~AHAP parsing (`HapticPattern.fromAhap`)~~ — shipped; `.ahap` files
+  convert directly to the Android formats
 - Preset patterns and an easing/curve library for hand-authoring
 - Optional Flutter companion package with playback glue for
   gaimon / vibration
