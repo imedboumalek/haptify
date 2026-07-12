@@ -13,6 +13,13 @@ enum ConversionWarningCode {
   /// The pattern's loop point lies outside the rendered waveform and was
   /// dropped.
   loopPointOutOfRange,
+
+  /// The target cannot loop, so the pattern's loop point was dropped.
+  loopUnsupported,
+
+  /// An event had no close match in the target's fixed vocabulary and was
+  /// rendered as the nearest primitive.
+  eventApproximatedAsPrimitive,
 }
 
 /// A note about information lost or approximated during a lossy conversion.
