@@ -112,19 +112,19 @@
         "Time": 0.15,
         "ParameterCurveControlPoints": [
           {
-            "Time": 0.15,
+            "Time": 0.0,
             "ParameterValue": 0.05699406802663167
           },
           {
-            "Time": 0.16,
+            "Time": 0.01,
             "ParameterValue": 0.04239290896718714
           },
           {
-            "Time": 0.17,
+            "Time": 0.02,
             "ParameterValue": 0.04371194241007522
           },
           {
-            "Time": 0.18,
+            "Time": 0.03,
             "ParameterValue": 0.03058424776867749
           }
         ]
