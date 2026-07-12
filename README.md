@@ -156,6 +156,14 @@ final wf = pattern.toWaveform();    // Android: Vibration.vibrate(
 the UI thread free. Need the decoded samples separately? Call
 `decodeAudioBytes(bytes)` to get `AudioData`, then `analyze` it.
 
+## Demo app
+
+The repository contains a Flutter demo app under
+[`example_app/`](https://github.com/imedboumalek/haptify/tree/main/example_app)
+with CC0 sample sounds and their pregenerated haptics, plus a file picker
+that converts any WAV/MP3 on the device at runtime. Run it on a real phone
+with `cd example_app && flutter run`.
+
 ## Roadmap
 
 - Android primitive compositions (`VibrationEffect.Composition`) as a fourth
