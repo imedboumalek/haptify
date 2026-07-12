@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0-dev.3
+
+- Convert audio loaded at runtime: `decodeAudioBytes(bytes)` and
+  `AudioAnalyzer.analyzeBytes(bytes)` decode WAV/MP3 straight from a
+  `Uint8List` — no file path, filesystem, or ffmpeg — for user uploads,
+  recordings, and downloads. Format is auto-detected from the bytes.
+- Internal: the file decoder now reuses the shared byte decoder.
+
 ## 0.2.0-dev.2
 
 - Restore the roadmap section in the README (primitive compositions, AHAP

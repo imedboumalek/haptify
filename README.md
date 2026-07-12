@@ -132,6 +132,30 @@ final audio = await const AudioDecoder().decodeFile('assets/audio/hit.wav');
 final pattern = const AudioAnalyzer().analyze(audio);
 ```
 
+### Converting audio loaded at runtime
+
+For sound provided while the app runs — a user upload, a recording, a
+download — decode straight from bytes; no file path, no filesystem, no
+`ffmpeg`. WAV and MP3 are supported and the format is detected from the
+bytes.
+
+```dart
+// e.g. bytes from file_picker, an HTTP response, or rootBundle
+final Uint8List bytes = await pickedFile.readAsBytes();
+
+final pattern = const AudioAnalyzer().analyzeBytes(bytes);
+
+final ahap = pattern.toAhap();      // iOS: Gaimon.pattern(ahap)
+final wf = pattern.toWaveform();    // Android: Vibration.vibrate(
+                                    //   pattern: wf.timings,
+                                    //   intensities: wf.amplitudes)
+```
+
+`analyzeBytes` runs synchronously; for large clips, run it in an
+[`Isolate`](https://api.flutter.dev/flutter/foundation/compute.html) to keep
+the UI thread free. Need the decoded samples separately? Call
+`decodeAudioBytes(bytes)` to get `AudioData`, then `analyze` it.
+
 ## Roadmap
 
 - Android primitive compositions (`VibrationEffect.Composition`) as a fourth
