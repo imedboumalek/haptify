@@ -34,10 +34,11 @@ class Sample {
 
 /// Builds the bundled-sample list from whatever lives in `assets/audio/`,
 /// pairing each sound with its pregenerated haptics in
-/// `assets/haptics/<name>.ahap` and `<name>.haptic.json` (both emitted by
-/// `haptify convert`). Drop a new sound plus its converted haptics into those
-/// folders and it shows up here — no code changes. Sounds without matching
-/// haptics are skipped.
+/// `assets/haptics/ahap/<name>.ahap` and
+/// `assets/haptics/waveform/<name>.haptic.json` (both emitted by
+/// `haptify convert`). Drop a new sound plus its converted haptics into
+/// those folders and it shows up here — no code changes. Sounds without
+/// matching haptics are skipped.
 Future<List<Sample>> loadBundledSamples() async {
   final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
   final assets = manifest.listAssets().toSet();
@@ -49,8 +50,8 @@ Future<List<Sample>> loadBundledSamples() async {
   final result = <Sample>[];
   for (final key in audio) {
     final base = key.split('/').last.replaceAll(RegExp(r'\.(mp3|wav)$'), '');
-    final ahapKey = 'assets/haptics/$base.ahap';
-    final waveformKey = 'assets/haptics/$base.haptic.json';
+    final ahapKey = 'assets/haptics/ahap/$base.ahap';
+    final waveformKey = 'assets/haptics/waveform/$base.haptic.json';
     if (!assets.contains(ahapKey) || !assets.contains(waveformKey)) continue;
 
     final ahap = await rootBundle.loadString(ahapKey);

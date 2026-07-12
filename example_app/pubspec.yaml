@@ -23,5 +23,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    # Flutter directory declarations are not recursive: each folder that
+    # directly contains files must be listed.
     - assets/audio/
-    - assets/haptics/
+    - assets/haptics/ahap/
+    - assets/haptics/waveform/
