@@ -9,62 +9,10 @@ const String explosion01Ahap = r'''
 
 /// Android waveform segment durations in milliseconds, for
 /// `VibrationEffect.createWaveform` or the vibration plugin.
-const List<int> explosion01Timings = [
-  90,
-  10,
-  10,
-  10,
-  10,
-  10,
-  10,
-  10,
-  10,
-  10,
-  10,
-  10,
-  10,
-  10,
-  10,
-  10,
-  10,
-  10,
-  10,
-  10,
-  10,
-  10,
-  10,
-  20,
-  10,
-];
+const List<int> explosion01Timings = [90, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 20, 10];
 
 /// Android waveform amplitudes (0-255), aligned with the timings.
-const List<int> explosion01Amplitudes = [
-  0,
-  186,
-  255,
-  126,
-  61,
-  71,
-  51,
-  53,
-  49,
-  50,
-  42,
-  37,
-  36,
-  110,
-  65,
-  43,
-  10,
-  14,
-  12,
-  14,
-  11,
-  7,
-  9,
-  7,
-  5,
-];
+const List<int> explosion01Amplitudes = [0, 186, 255, 126, 61, 71, 51, 53, 49, 50, 42, 37, 36, 110, 65, 43, 10, 14, 12, 14, 11, 7, 9, 7, 5];
 
 /// Android waveform repeat index (-1 plays once).
 const int explosion01Repeat = -1;
