@@ -10,6 +10,7 @@ export 'src/audio/audio_data.dart';
 export 'src/audio/bytes_decoder.dart';
 export 'src/audio/decoder.dart';
 export 'src/conversion_warning.dart';
+export 'src/decoders/ahap_decoder.dart';
 export 'src/dsl/combinators.dart';
 export 'src/encoders/ahap/ahap_encoder.dart';
 export 'src/encoders/primitives/primitive_composition.dart';

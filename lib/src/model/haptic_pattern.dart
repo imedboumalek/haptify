@@ -1,5 +1,6 @@
 import 'package:meta/meta.dart';
 
+import '../decoders/ahap_decoder.dart';
 import 'haptic_curve.dart';
 import 'haptic_event.dart';
 import 'haptic_metadata.dart';
@@ -40,6 +41,14 @@ class HapticPattern {
 
   /// An empty pattern; the identity for sequencing and overlaying.
   HapticPattern.empty() : this();
+
+  /// Parses an AHAP JSON document into a pattern — e.g. to convert an
+  /// existing `.ahap` file to an Android waveform without re-analyzing
+  /// audio. Parsing is tolerant; see [AhapDecoder] for the details.
+  ///
+  /// Throws a [FormatException] when [ahapJson] is not valid AHAP.
+  static HapticPattern fromAhap(String ahapJson) =>
+      const AhapDecoder().decode(ahapJson);
 
   /// The haptic events, in authoring order. Unmodifiable.
   final List<HapticEvent> events;
