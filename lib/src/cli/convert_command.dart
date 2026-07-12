@@ -31,8 +31,9 @@ class ConvertCommand extends Command<int> {
         'out',
         abbr: 'o',
         help: 'Put all generated files flat into this directory. By default '
-            'outputs are grouped by type under <source folder>/haptify-output '
-            '(ahap/, waveform/), with Dart sources in lib/generated/.',
+            'outputs are grouped by type in a haptify-output/ folder next to '
+            'the source folder (ahap/, waveform/), with Dart sources in '
+            'lib/generated/.',
       )
       ..addMultiOption(
         'formats',
@@ -212,9 +213,9 @@ class ConvertCommand extends Command<int> {
   /// Where the [format] output named [fileName] for [input] goes.
   ///
   /// An explicit [outDir] receives everything flat. Otherwise outputs are
-  /// grouped by type under `<source folder>/haptify-output/`, except Dart
-  /// sources, which go to `lib/generated/` so they are importable from a
-  /// Dart or Flutter project run from its root.
+  /// grouped by type in a `haptify-output/` folder placed next to the source
+  /// folder, except Dart sources, which go to `lib/generated/` so they are
+  /// importable from a Dart or Flutter project run from its root.
   static String _outputPath(
     String input,
     String format,
@@ -223,7 +224,37 @@ class ConvertCommand extends Command<int> {
   ) {
     if (outDir != null) return p.join(outDir, fileName);
     if (format == 'dart') return p.join('lib', 'generated', fileName);
-    return p.join(p.dirname(input), 'haptify-output', format, fileName);
+    return p.join(
+        _groupedOutputBase(input), 'haptify-output', format, fileName);
+  }
+
+  /// The directory that holds the grouped `haptify-output/` folder for
+  /// [input]: next to (a sibling of) the source folder.
+  ///
+  /// As a guard, the folder is never placed above the current working
+  /// directory — when the source folder is the working directory itself (as
+  /// with a bare `haptify convert` scan), the output stays inside it rather
+  /// than escaping upward.
+  static String _groupedOutputBase(String input) {
+    final sourceFolder = p.dirname(input);
+    final sibling = p.dirname(sourceFolder);
+    final cwd = _resolve('.');
+    final absSibling = _resolve(sibling);
+    if (p.equals(cwd, absSibling) || p.isWithin(cwd, absSibling)) {
+      return sibling;
+    }
+    return sourceFolder;
+  }
+
+  /// Absolute, symlink-resolved form of [path]; falls back to a plain
+  /// absolute path when it does not exist. Resolving symlinks keeps
+  /// comparisons correct where the temp dir and cwd differ only by a symlink
+  /// (e.g. macOS `/var` vs `/private/var`).
+  static String _resolve(String path) {
+    final directory = Directory(path);
+    return directory.existsSync()
+        ? directory.resolveSymbolicLinksSync()
+        : p.normalize(p.absolute(path));
   }
 
   /// Resolves the raw arguments into audio file paths.

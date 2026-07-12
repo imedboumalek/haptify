@@ -49,18 +49,26 @@ void main() {
       samples[toneStart + i] = 0.7 * sin(2 * pi * 90 * i / sampleRate);
     }
     final path = p.join(tempDir.path, name);
+    Directory(p.dirname(path)).createSync(recursive: true);
     await Wav([samples], sampleRate).writeFile(path);
     return path;
   }
 
   group('haptify convert', () {
     test('generates all three outputs in the default grouped layout', () async {
-      final input = await writeTestWav('heavy-hit_01.wav');
+      final input = await writeTestWav('sounds/heavy-hit_01.wav');
       final exit = await runCliInTempDir(['convert', input]);
       expect(exit, 0);
 
-      // ahap and waveform group by type under <source>/haptify-output;
-      // Dart sources go to lib/generated under the working directory.
+      // ahap and waveform group by type in haptify-output/ next to the
+      // source folder (not inside it); Dart sources go to lib/generated
+      // under the working directory.
+      expect(
+        Directory(p.join(tempDir.path, 'sounds', 'haptify-output'))
+            .existsSync(),
+        isFalse,
+        reason: 'output must sit next to the source folder, not under it',
+      );
       final ahapFile = File(
           p.join(tempDir.path, 'haptify-output', 'ahap', 'heavy-hit_01.ahap'));
       final jsonFile = File(p.join(tempDir.path, 'haptify-output', 'waveform',
@@ -95,7 +103,7 @@ void main() {
     });
 
     test('--formats limits the outputs', () async {
-      final input = await writeTestWav('tap.wav');
+      final input = await writeTestWav('sounds/tap.wav');
       final exit =
           await runCliInTempDir(['convert', '--formats', 'ahap', input]);
       expect(exit, 0);
@@ -126,12 +134,14 @@ void main() {
     });
 
     test('a folder input converts the audio files inside it', () async {
-      await writeTestWav('a.wav');
-      await writeTestWav('b.wav');
-      File(p.join(tempDir.path, 'notes.txt')).writeAsStringSync('not audio');
+      await writeTestWav('sounds/a.wav');
+      await writeTestWav('sounds/b.wav');
+      File(p.join(tempDir.path, 'sounds', 'notes.txt'))
+          .writeAsStringSync('not audio');
       final exit =
-          await runCliInTempDir(['convert', '--formats', 'ahap', tempDir.path]);
+          await runCliInTempDir(['convert', '--formats', 'ahap', 'sounds']);
       expect(exit, 0);
+      // Output sits next to the sounds folder, in the working directory.
       final outDir = p.join(tempDir.path, 'haptify-output', 'ahap');
       expect(File(p.join(outDir, 'a.ahap')).existsSync(), isTrue);
       expect(File(p.join(outDir, 'b.ahap')).existsSync(), isTrue);
@@ -150,10 +160,10 @@ void main() {
     });
 
     test('expands glob patterns itself', () async {
-      await writeTestWav('a.wav');
-      await writeTestWav('b.wav');
+      await writeTestWav('sounds/a.wav');
+      await writeTestWav('sounds/b.wav');
       final exit = await runCliInTempDir(
-          ['convert', '--formats', 'ahap', p.join(tempDir.path, '*.wav')]);
+          ['convert', '--formats', 'ahap', 'sounds/*.wav']);
       expect(exit, 0);
       final outDir = p.join(tempDir.path, 'haptify-output', 'ahap');
       expect(File(p.join(outDir, 'a.ahap')).existsSync(), isTrue);
