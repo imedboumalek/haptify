@@ -1,0 +1,67 @@
+<svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg" role="img" font-family="-apple-system, 'Segoe UI', Roboto, sans-serif">
+  <title>haptify banner</title>
+  <desc>Pipeline banner: audio files are analyzed and converted into iOS AHAP, Android waveform, and Dart haptic outputs.</desc>
+  <style>
+    .mono { font-family: 'SF Mono', Menlo, Consolas, monospace; }
+    .fw5 { font-weight: 500; }
+  </style>
+
+  <rect x="0" y="0" width="1920" height="1080" fill="#0B1120"/>
+  <rect x="0" y="0" width="1920" height="6" fill="#38BDF8"/>
+
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#38BDF8"/>
+    </marker>
+  </defs>
+
+  <text x="960" y="252" text-anchor="middle" font-size="150" class="fw5" fill="#F3F5FA">haptify</text>
+  <circle cx="1268" cy="206" r="15" fill="#38BDF8"/>
+  <circle cx="1268" cy="206" r="27" fill="none" stroke="#38BDF8" stroke-width="2" opacity="0.35"/>
+
+  <text x="960" y="342" text-anchor="middle" font-size="42" fill="#C7CEDF">Audio &#8594; haptics for iOS &amp; Android, from the CLI or on-device at runtime.</text>
+
+  <rect x="120" y="600" width="12" height="40" rx="6" fill="#38BDF8"/>
+  <rect x="144" y="565" width="12" height="110" rx="6" fill="#38BDF8"/>
+  <rect x="168" y="535" width="12" height="170" rx="6" fill="#38BDF8"/>
+  <rect x="192" y="580" width="12" height="80" rx="6" fill="#38BDF8"/>
+  <rect x="216" y="510" width="12" height="220" rx="6" fill="#38BDF8"/>
+  <rect x="240" y="555" width="12" height="130" rx="6" fill="#38BDF8"/>
+  <rect x="264" y="500" width="12" height="240" rx="6" fill="#38BDF8"/>
+  <rect x="288" y="545" width="12" height="150" rx="6" fill="#38BDF8"/>
+  <rect x="312" y="510" width="12" height="220" rx="6" fill="#38BDF8"/>
+  <rect x="336" y="570" width="12" height="100" rx="6" fill="#38BDF8"/>
+  <rect x="360" y="535" width="12" height="170" rx="6" fill="#38BDF8"/>
+  <rect x="384" y="585" width="12" height="70" rx="6" fill="#38BDF8"/>
+  <rect x="408" y="550" width="12" height="140" rx="6" fill="#38BDF8"/>
+  <rect x="432" y="592" width="12" height="55" rx="6" fill="#38BDF8"/>
+  <rect x="456" y="572" width="12" height="95" rx="6" fill="#38BDF8"/>
+  <text x="294" y="775" text-anchor="middle" font-size="28" fill="#8A94AD">audio &#183; .wav / .mp3</text>
+
+  <line x1="502" y1="620" x2="600" y2="620" stroke="#38BDF8" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <rect x="620" y="545" width="380" height="150" rx="18" fill="#131C31" stroke="#26324F" stroke-width="1.5"/>
+  <text x="810" y="608" text-anchor="middle" font-size="40" class="fw5" fill="#F3F5FA">analyze</text>
+  <text x="810" y="652" text-anchor="middle" font-size="24" fill="#8A94AD">envelope &#183; onsets &#183; sharpness</text>
+  <text x="810" y="775" text-anchor="middle" font-size="28" fill="#8A94AD">pure-Dart DSP</text>
+
+  <line x1="1002" y1="620" x2="1122" y2="620" stroke="#38BDF8" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <rect x="1150" y="487" width="630" height="74" rx="14" fill="#131C31" stroke="#26324F" stroke-width="1.5"/>
+  <circle cx="1186" cy="524" r="7" fill="#E5E7EB"/>
+  <text x="1212" y="534" font-size="30" class="mono fw5" fill="#F3F5FA">.ahap</text>
+  <text x="1756" y="533" text-anchor="end" font-size="24" fill="#8A94AD">iOS &#183; Core Haptics</text>
+
+  <rect x="1150" y="583" width="630" height="74" rx="14" fill="#131C31" stroke="#26324F" stroke-width="1.5"/>
+  <circle cx="1186" cy="620" r="7" fill="#7DD87D"/>
+  <text x="1212" y="630" font-size="30" class="mono fw5" fill="#F3F5FA">.haptic.json</text>
+  <text x="1756" y="629" text-anchor="end" font-size="24" fill="#8A94AD">Android &#183; VibrationEffect</text>
+
+  <rect x="1150" y="679" width="630" height="74" rx="14" fill="#131C31" stroke="#26324F" stroke-width="1.5"/>
+  <circle cx="1186" cy="716" r="7" fill="#38BDF8"/>
+  <text x="1212" y="726" font-size="30" class="mono fw5" fill="#F3F5FA">_haptic.dart</text>
+  <text x="1756" y="725" text-anchor="end" font-size="24" fill="#8A94AD">compiled constants</text>
+
+  <text x="960" y="905" text-anchor="middle" font-size="30" class="mono" fill="#C7CEDF">$ haptify convert assets/audio/*.wav</text>
+  <text x="960" y="962" text-anchor="middle" font-size="26" fill="#8A94AD">pub.dev/packages/haptify&#160;&#160;&#183;&#160;&#160;github.com/imedboumalek/haptify&#160;&#160;&#183;&#160;&#160;imed.dev</text>
+</svg>
