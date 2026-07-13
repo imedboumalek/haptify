@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0-dev.2
+
+- The analyzer now emits time-varying **sharpness curves** (iOS): each
+  continuous segment's brightness (zero-crossing rate) is tracked over time
+  and encoded as additive `HapticSharpnessControl` deviations around the
+  event's sharpness. Curves are only emitted when the brightness actually
+  moves; disable with `--no-sharpness-curves` or
+  `AnalysisOptions(sharpnessCurves: false)`.
+- Android conversions now report one `curveParameterUnsupported` warning per
+  parameter type (with a count) instead of one per curve.
+- Roadmap: playback and the Flutter companion package were removed; the demo
+  app is the reference integration.
+
 ## 0.3.0-dev.1
 
 Accuracy fixes for long and complex sounds:

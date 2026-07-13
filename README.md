@@ -91,6 +91,9 @@ haptify convert [audio files, globs, or folders] [options]
                            (default 1.0)
     --silence-threshold    Level under which audio counts as silence
                            (default 0.02)
+    --[no-]sharpness-curves
+                           Emit time-varying sharpness curves (iOS); on by
+                           default, disable to shrink files
 -v, --verbose              Print analysis details and conversion warnings
 ```
 
@@ -121,7 +124,8 @@ Pass `-o some/dir` to put everything flat into one directory instead.
    and LAME gapless trimming so timing matches the original audio).
 2. **Analyze**: an RMS loudness envelope is computed per frame; energy-flux
    onset detection finds percussive hits; the zero-crossing rate estimates
-   how *sharp* each moment feels.
+   how *sharp* each moment feels — emitted as a time-varying sharpness curve
+   on iOS when the brightness moves.
 3. **Model**: hits become transient haptic events, sustained passages become
    continuous events shaped by an intensity curve (simplified with
    Ramer-Douglas-Peucker to stay compact).
@@ -200,8 +204,8 @@ with `cd example_app && flutter run`.
   shipped as the `primitives` output format
 - ~~AHAP parsing (`HapticPattern.fromAhap`)~~ — shipped; `.ahap` files
   convert directly to the Android formats
-- Analyzer sharpness curves (iOS): time-varying sharpness that follows the
-  sound's brightness
+- ~~Analyzer sharpness curves (iOS)~~ — shipped; sharpness follows the
+  sound's brightness over time
 - Preset patterns and an easing/curve library for hand-authoring
 
 ## License
