@@ -2,11 +2,11 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
 
 jobs:
-  build:
+  package:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -17,8 +17,24 @@ jobs:
         with:
           sdk: ${{ matrix.sdk }}
       - run: dart pub get
-      - run: dart format --output=none --set-exit-if-changed .
-      - run: dart analyze --fatal-infos
+      # Scoped to the package: example_app is a Flutter project with its own
+      # SDK/formatter and is checked by the demo-app job below.
+      - run: dart format --output=none --set-exit-if-changed lib bin test example
+      - run: dart analyze --fatal-infos lib bin test example
       - run: dart test
       - run: dart pub publish --dry-run
         if: matrix.sdk == 'stable'
+
+  demo-app:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: example_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
