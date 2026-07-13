@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:haptify/haptify.dart';
 import 'package:haptify/src/cli/runner.dart';
 import 'package:haptify/src/output/dart_source.dart';
 import 'package:path/path.dart' as p;
@@ -185,6 +186,58 @@ void main() {
     test('no inputs and no audio in the working directory is a usage error',
         () async {
       expect(await runCliInTempDir(['convert']), 64);
+    });
+
+    test('--formats primitives writes a composition JSON', () async {
+      final input = await writeTestWav('sounds/tap.wav');
+      final exit =
+          await runCliInTempDir(['convert', '--formats', 'primitives', input]);
+      expect(exit, 0);
+      final file = File(p.join(
+          tempDir.path, 'haptify-output', 'primitives', 'tap.primitives.json'));
+      expect(file.existsSync(), isTrue);
+      final json = jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
+      expect(json['primitives'], isA<List<Object?>>());
+      expect(json['primitives'], isNotEmpty);
+      expect(json['minApiLevel'], greaterThanOrEqualTo(30));
+    });
+
+    test('an .ahap input converts to Android formats without audio', () async {
+      final ahapPath = p.join(tempDir.path, 'sounds', 'authored.ahap');
+      Directory(p.dirname(ahapPath)).createSync(recursive: true);
+      final pattern = HapticPattern.events([
+        HapticEvent.transient(at: Duration.zero, intensity: 0.9),
+        HapticEvent.continuous(at: 100.ms, duration: 300.ms, intensity: 0.6),
+      ]);
+      File(ahapPath).writeAsStringSync(pattern.toAhap());
+
+      final exit = await runCliInTempDir(
+          ['convert', '--formats', 'waveform,dart', ahapPath]);
+      expect(exit, 0);
+      final waveformFile = File(p.join(
+          tempDir.path, 'haptify-output', 'waveform', 'authored.haptic.json'));
+      expect(waveformFile.existsSync(), isTrue);
+      final json =
+          jsonDecode(waveformFile.readAsStringSync()) as Map<String, Object?>;
+      expect(json['timings'], isNotEmpty);
+      expect(
+        File(p.join(tempDir.path, 'lib', 'generated', 'authored_haptic.dart'))
+            .existsSync(),
+        isTrue,
+      );
+    });
+
+    test('a malformed .ahap input fails without crashing the batch', () async {
+      final bad = p.join(tempDir.path, 'bad.ahap');
+      File(bad).writeAsStringSync('{"Version": 1.0}');
+      await writeTestWav('good.wav');
+      final exit = await runCliInTempDir(['convert', '--formats', 'ahap']);
+      expect(exit, 1, reason: 'one failure, but the batch continues');
+      expect(
+        File(p.join(tempDir.path, 'haptify-output', 'ahap', 'good.ahap'))
+            .existsSync(),
+        isTrue,
+      );
     });
   });
 

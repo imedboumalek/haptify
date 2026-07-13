@@ -53,13 +53,17 @@ class WaveformEncoder {
         ? 0
         : (total.inMicroseconds / resolution.inMicroseconds).ceil();
 
-    // Sample, then run-length encode equal neighboring amplitudes.
+    // Sample at each step's midpoint — unbiased for ramps, unlike sampling
+    // at segment starts which lags the signal by half a step — then
+    // run-length encode equal neighboring amplitudes.
     final timings = <int>[];
     final amplitudes = <int>[];
     final stepMs = resolution.inMilliseconds;
+    final halfStep = Duration(microseconds: resolution.inMicroseconds ~/ 2);
     for (var k = 0; k < steps; k++) {
-      final amp =
-          (intensityAt(pattern, resolution * k) * 255).round().clamp(0, 255);
+      final amp = (intensityAt(pattern, resolution * k + halfStep) * 255)
+          .round()
+          .clamp(0, 255);
       if (amplitudes.isNotEmpty && amplitudes.last == amp) {
         timings[timings.length - 1] += stepMs;
       } else {

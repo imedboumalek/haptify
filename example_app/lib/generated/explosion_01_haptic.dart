@@ -4,15 +4,65 @@
 /// AHAP pattern for iOS Core Haptics playback,
 /// e.g. `Gaimon.pattern(explosion01Ahap)`.
 const String explosion01Ahap = r'''
-{"Version":1.0,"Pattern":[{"Event":{"Time":0.09,"EventType":"HapticTransient","EventParameters":[{"ParameterID":"HapticIntensity","ParameterValue":1.0},{"ParameterID":"HapticSharpness","ParameterValue":0.32914029430219166}]}},{"Event":{"Time":0.09,"EventType":"HapticContinuous","EventDuration":0.25,"EventParameters":[{"ParameterID":"HapticIntensity","ParameterValue":1.0},{"ParameterID":"HapticSharpness","ParameterValue":0.2449489742783178}]}},{"ParameterCurve":{"ParameterID":"HapticIntensityControl","Time":0.09,"ParameterCurveControlPoints":[{"Time":0.09,"ParameterValue":0.7305707412098995},{"Time":0.1,"ParameterValue":1.0},{"Time":0.11,"ParameterValue":0.49281903384243186},{"Time":0.12,"ParameterValue":0.2372744715439483},{"Time":0.13,"ParameterValue":0.2778066035245617},{"Time":0.14,"ParameterValue":0.1993434336608643},{"Time":0.15,"ParameterValue":0.20589364498970744},{"Time":0.16,"ParameterValue":0.1932326192066626},{"Time":0.17,"ParameterValue":0.19745357552684747},{"Time":0.18,"ParameterValue":0.16415778937568304},{"Time":0.19,"ParameterValue":0.14416704840746603},{"Time":0.2,"ParameterValue":0.13923286514087566},{"Time":0.21,"ParameterValue":0.4327785277651334},{"Time":0.22,"ParameterValue":0.2549058066700385},{"Time":0.23,"ParameterValue":0.16815875715113865},{"Time":0.24,"ParameterValue":0.03932032747590583}]}},{"Event":{"Time":0.21,"EventType":"HapticTransient","EventParameters":[{"ParameterID":"HapticIntensity","ParameterValue":0.4327785277651334},{"ParameterID":"HapticSharpness","ParameterValue":0.28867513459481287}]}},{"ParameterCurve":{"ParameterID":"HapticIntensityControl","Time":0.24,"ParameterCurveControlPoints":[{"Time":0.24,"ParameterValue":0.03932032747590583},{"Time":0.25,"ParameterValue":0.053841914963404285},{"Time":0.26,"ParameterValue":0.04746831760885179},{"Time":0.27,"ParameterValue":0.05511768142653101},{"Time":0.28,"ParameterValue":0.042102660725405965},{"Time":0.29,"ParameterValue":0.029014318136621423},{"Time":0.3,"ParameterValue":0.036064714010754194},{"Time":0.31,"ParameterValue":0.02765789447832531},{"Time":0.32,"ParameterValue":0.0290081662273214},{"Time":0.33,"ParameterValue":0.02096856066941055}]}}]}
+{"Version":1.0,"Pattern":[{"Event":{"Time":0.09,"EventType":"HapticTransient","EventParameters":[{"ParameterID":"HapticIntensity","ParameterValue":1.0},{"ParameterID":"HapticSharpness","ParameterValue":0.32914029430219166}]}},{"Event":{"Time":0.09,"EventType":"HapticContinuous","EventDuration":0.25,"EventParameters":[{"ParameterID":"HapticIntensity","ParameterValue":1.0},{"ParameterID":"HapticSharpness","ParameterValue":0.2449489742783178}]}},{"ParameterCurve":{"ParameterID":"HapticIntensityControl","Time":0.09,"ParameterCurveControlPoints":[{"Time":0.0,"ParameterValue":0.7305707412098995},{"Time":0.01,"ParameterValue":1.0},{"Time":0.02,"ParameterValue":0.49281903384243186},{"Time":0.03,"ParameterValue":0.2372744715439483},{"Time":0.04,"ParameterValue":0.2778066035245617},{"Time":0.05,"ParameterValue":0.1993434336608643},{"Time":0.06,"ParameterValue":0.20589364498970744},{"Time":0.07,"ParameterValue":0.1932326192066626},{"Time":0.08,"ParameterValue":0.19745357552684747},{"Time":0.09,"ParameterValue":0.16415778937568304},{"Time":0.1,"ParameterValue":0.14416704840746603},{"Time":0.11,"ParameterValue":0.13923286514087566},{"Time":0.12,"ParameterValue":0.4327785277651334},{"Time":0.13,"ParameterValue":0.2549058066700385},{"Time":0.14,"ParameterValue":0.16815875715113865},{"Time":0.15,"ParameterValue":0.03932032747590583}]}},{"Event":{"Time":0.21,"EventType":"HapticTransient","EventParameters":[{"ParameterID":"HapticIntensity","ParameterValue":0.4327785277651334},{"ParameterID":"HapticSharpness","ParameterValue":0.28867513459481287}]}},{"ParameterCurve":{"ParameterID":"HapticIntensityControl","Time":0.24,"ParameterCurveControlPoints":[{"Time":0.0,"ParameterValue":0.03932032747590583},{"Time":0.01,"ParameterValue":0.053841914963404285},{"Time":0.02,"ParameterValue":0.04746831760885179},{"Time":0.03,"ParameterValue":0.05511768142653101},{"Time":0.04,"ParameterValue":0.042102660725405965},{"Time":0.05,"ParameterValue":0.029014318136621423},{"Time":0.06,"ParameterValue":0.036064714010754194},{"Time":0.07,"ParameterValue":0.02765789447832531},{"Time":0.08,"ParameterValue":0.0290081662273214},{"Time":0.09,"ParameterValue":0.02096856066941055}]}}]}
 ''';
 
 /// Android waveform segment durations in milliseconds, for
 /// `VibrationEffect.createWaveform` or the vibration plugin.
-const List<int> explosion01Timings = [90, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 20, 10];
+const List<int> explosion01Timings = [
+  90,
+  10,
+  10,
+  10,
+  10,
+  10,
+  10,
+  10,
+  10,
+  10,
+  10,
+  10,
+  10,
+  10,
+  10,
+  10,
+  10,
+  20,
+  10,
+  10,
+  20,
+  10,
+  10,
+  10,
+];
 
 /// Android waveform amplitudes (0-255), aligned with the timings.
-const List<int> explosion01Amplitudes = [0, 186, 255, 126, 61, 71, 51, 53, 49, 50, 42, 37, 36, 110, 65, 43, 10, 14, 12, 14, 11, 7, 9, 7, 5];
+const List<int> explosion01Amplitudes = [
+  0,
+  221,
+  190,
+  93,
+  66,
+  61,
+  52,
+  51,
+  50,
+  46,
+  39,
+  36,
+  73,
+  88,
+  54,
+  26,
+  12,
+  13,
+  12,
+  9,
+  8,
+  7,
+  6,
+  5,
+];
 
 /// Android waveform repeat index (-1 plays once).
 const int explosion01Repeat = -1;

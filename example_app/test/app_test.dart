@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:haptify_demo/main.dart';
+import 'package:haptify_demo/models/conversion_result.dart';
+import 'package:haptify_demo/models/sample.dart';
 
 void main() {
   testWidgets(

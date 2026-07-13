@@ -110,11 +110,44 @@ void main() {
     ];
     const budget = 8;
     final pattern = const AudioAnalyzer(
-      options: AnalysisOptions(maxCurvePoints: budget),
+      options: AnalysisOptions(maxCurvePoints: budget, curvePointsPerSecond: 0),
     ).analyze(audioFrom(samples));
     for (final curve in pattern.curves) {
       expect(curve.points.length, lessThanOrEqualTo(budget));
     }
+  });
+
+  test('long sounds keep envelope detail via the per-second point budget', () {
+    // Ten seconds of tone with a 3Hz tremolo: a busy envelope that a flat
+    // 32-point cap would flatten beyond recognition.
+    final base = tone(frequency: 90, seconds: 10.0);
+    final samples = [
+      for (var i = 0; i < base.length; i++)
+        base[i] * (0.55 + 0.45 * sin(2 * pi * 3 * i / sampleRate)),
+    ];
+    final pattern = const AudioAnalyzer().analyze(audioFrom(samples));
+    final curve = pattern.curves
+        .where((c) => c.parameter == HapticCurveParameter.intensityControl)
+        .single;
+
+    // Budget for 10s at the default 16 points/s is 160; a 3Hz tremolo needs
+    // at least two points per cycle (60) to be represented at all.
+    expect(curve.points.length, greaterThan(32),
+        reason: 'must exceed the old flat per-segment cap');
+    expect(curve.points.length, lessThanOrEqualTo(160));
+
+    // The kept points must actually trace the tremolo: values should swing
+    // repeatedly between loud and quiet.
+    var directionChanges = 0;
+    for (var i = 2; i < curve.points.length; i++) {
+      final prev = curve.points[i - 1].value - curve.points[i - 2].value;
+      final next = curve.points[i].value - curve.points[i - 1].value;
+      if (prev.sign != next.sign && prev.abs() > 0.02 && next.abs() > 0.02) {
+        directionChanges++;
+      }
+    }
+    expect(directionChanges, greaterThan(20),
+        reason: 'the 3Hz tremolo (30 cycles) must survive simplification');
   });
 
   test('separate sounds produce separate continuous segments', () {

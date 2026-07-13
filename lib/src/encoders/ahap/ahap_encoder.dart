@@ -135,9 +135,11 @@ class AhapEncoder {
             kParameterId: id,
             kTime: _seconds(chunk.first.time),
             kParameterCurveControlPoints: [
+              // Control point times are relative to the curve's Time, per
+              // the Core Haptics AHAP semantics.
               for (final point in chunk)
                 {
-                  kTime: _seconds(point.time),
+                  kTime: _seconds(point.time - chunk.first.time),
                   kParameterValue: point.value,
                 },
             ],

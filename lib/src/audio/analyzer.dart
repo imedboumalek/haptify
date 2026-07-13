@@ -20,6 +20,7 @@ class AnalysisOptions {
     this.minOnsetGap = const Duration(milliseconds: 50),
     this.silenceThreshold = 0.02,
     this.maxCurvePoints = 32,
+    this.curvePointsPerSecond = 16,
     this.gamma = 1.0,
   });
 
@@ -37,10 +38,20 @@ class AnalysisOptions {
   /// counts as silence.
   final double silenceThreshold;
 
-  /// The maximum number of intensity-curve control points per continuous
-  /// segment. More points follow the envelope more faithfully at the cost
-  /// of bigger files.
+  /// The minimum intensity-curve point budget per continuous segment.
+  ///
+  /// The actual budget grows with the segment's length (see
+  /// [curvePointsPerSecond]) so long sounds keep their envelope detail:
+  /// `budget = max(maxCurvePoints, seconds * curvePointsPerSecond)`.
   final int maxCurvePoints;
+
+  /// How many intensity-curve points a segment may use per second of audio.
+  ///
+  /// This is what preserves envelope detail in long, complex sounds — a
+  /// 60-second track gets ~960 points at the default of 16 instead of being
+  /// crushed into [maxCurvePoints]. Set to 0 to make [maxCurvePoints] a
+  /// hard per-segment cap regardless of length.
+  final double curvePointsPerSecond;
 
   /// Perceptual exponent applied to the normalized envelope
   /// (`intensity = envelope^gamma`). Values below 1.0 boost quiet passages.
@@ -127,9 +138,15 @@ class AudioAnalyzer {
         for (var i = segment.start; i < segment.end; i++)
           CurvePoint(frameTime(i), (envelope[i] / peak).clamp(0.0, 1.0)),
       ];
-      curves.add(HapticCurve.intensity(
-        _simplify(points, options.maxCurvePoints),
-      ));
+      // The point budget scales with the segment length so long, complex
+      // sounds keep their envelope detail.
+      final seconds =
+          frameTime(length).inMicroseconds / Duration.microsecondsPerSecond;
+      final budget = max(
+        options.maxCurvePoints,
+        (seconds * options.curvePointsPerSecond).ceil(),
+      );
+      curves.add(HapticCurve.intensity(_simplify(points, budget)));
     }
 
     return HapticPattern(events: events, curves: curves);
@@ -245,17 +262,34 @@ class AudioAnalyzer {
   static double _sharpness(double zeroCrossingRate) =>
       sqrt((zeroCrossingRate / 0.5).clamp(0.0, 1.0));
 
-  /// Ramer–Douglas–Peucker curve simplification, with the tolerance raised
-  /// until the result fits in [maxPoints].
+  /// Ramer–Douglas–Peucker curve simplification fitted to [maxPoints].
+  ///
+  /// The tolerance is binary-searched for the finest value whose result
+  /// fits the budget, so the kept points carry as much envelope detail as
+  /// the budget allows instead of overshooting to a coarse tolerance.
   static List<CurvePoint> _simplify(List<CurvePoint> points, int maxPoints) {
-    if (points.length <= max(2, maxPoints)) return points;
-    var epsilon = 0.01;
-    var result = points;
-    while (result.length > maxPoints && epsilon < 1.0) {
-      result = _rdp(points, epsilon);
-      epsilon *= 2;
+    final budget = max(2, maxPoints);
+    if (points.length <= budget) return points;
+
+    // Find a coarse-enough upper tolerance, then refine downward.
+    var hi = 0.005;
+    var best = _rdp(points, hi);
+    while (best.length > budget && hi < 1.0) {
+      hi *= 2;
+      best = _rdp(points, hi);
     }
-    return result;
+    var lo = hi / 2;
+    for (var i = 0; i < 10; i++) {
+      final mid = (lo + hi) / 2;
+      final candidate = _rdp(points, mid);
+      if (candidate.length > budget) {
+        lo = mid;
+      } else {
+        hi = mid;
+        best = candidate;
+      }
+    }
+    return best;
   }
 
   static List<CurvePoint> _rdp(List<CurvePoint> points, double epsilon) {

@@ -129,16 +129,40 @@ void main() {
       final patternList = pattern.toAhapMap()['Pattern']! as List<Object?>;
       expect(patternList.length, 2);
 
+      Map<String, Object?> curveOf(Object? entry) =>
+          (entry! as Map<String, Object?>)['ParameterCurve']!
+              as Map<String, Object?>;
       List<Object?> controlPoints(Object? entry) =>
-          ((entry! as Map<String, Object?>)['ParameterCurve']!
-                  as Map<String, Object?>)['ParameterCurveControlPoints']!
-              as List<Object?>;
+          curveOf(entry)['ParameterCurveControlPoints']! as List<Object?>;
       final first = controlPoints(patternList[0]);
       final second = controlPoints(patternList[1]);
       expect(first.length, 16);
       expect(second.length, 5);
-      // The boundary point is shared so interpolation has no gap.
-      expectDeepEquals(second.first, first.last);
+      // Control point times are relative to each chunk's start; the second
+      // chunk re-emits the shared boundary point at its own time zero so
+      // interpolation has no gap.
+      expect(curveOf(patternList[1])['Time'], 0.15);
+      expect((second.first! as Map<String, Object?>)['Time'], 0.0);
+      expect(
+        (second.first! as Map<String, Object?>)['ParameterValue'],
+        (first.last! as Map<String, Object?>)['ParameterValue'],
+      );
+    });
+
+    test('curve control point times are relative to the curve start', () {
+      final pattern = HapticPattern(curves: [
+        HapticCurve.intensity([
+          CurvePoint(10.s, 0.2),
+          CurvePoint(12.s, 0.9),
+        ]),
+      ]);
+      final patternList = pattern.toAhapMap()['Pattern']! as List<Object?>;
+      final curve = (patternList.single!
+          as Map<String, Object?>)['ParameterCurve']! as Map<String, Object?>;
+      expect(curve['Time'], 10.0);
+      final points = curve['ParameterCurveControlPoints']! as List<Object?>;
+      expect((points.first! as Map<String, Object?>)['Time'], 0.0);
+      expect((points.last! as Map<String, Object?>)['Time'], 2.0);
     });
 
     test('sustained default emits no Sustained parameter', () {
