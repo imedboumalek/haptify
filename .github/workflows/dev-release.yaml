@@ -1,0 +1,39 @@
+name: Dev prerelease
+
+# The dev channel: any push to dev whose pubspec carries a -dev.N prerelease
+# version that has not been tagged yet gets tagged and published to pub.dev
+# automatically. Stable versions on dev are ignored — stable releases are
+# tagged manually on main.
+on:
+  push:
+    branches: [dev]
+
+permissions:
+  contents: write # create the release tag
+  actions: write # dispatch the publish workflow
+
+jobs:
+  tag-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        run: |
+          echo "version=$(sed -n 's/^version: *//p' pubspec.yaml)" >> "$GITHUB_OUTPUT"
+      - name: Tag and dispatch publish
+        if: contains(steps.version.outputs.version, '-dev.')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          TAG="v$VERSION"
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists; nothing to publish."
+            exit 0
+          fi
+          git tag "$TAG"
+          git push origin "$TAG"
+          # Tags pushed with GITHUB_TOKEN do not trigger tag workflows
+          # (recursion guard), so dispatch the publish workflow on the tag
+          # ref explicitly — pub.dev's OIDC check needs the tag ref.
+          gh workflow run publish.yaml --ref "$TAG"
