@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:haptify/haptify.dart';
 import 'package:test/test.dart';
 
@@ -160,6 +161,71 @@ void main() {
     final continuous = pattern.events.whereType<ContinuousEvent>().toList();
     expect(continuous, hasLength(2));
     expect(continuous[1].time.inMilliseconds, closeTo(700, 30));
+  });
+
+  group('sharpness curves', () {
+    /// One second with no silence gap: dull 90Hz sine for the first half,
+    /// bright white noise at matched RMS for the second — a brightness sweep
+    /// within a single continuous segment.
+    List<double> brightnessSweep() {
+      final random = Random(5);
+      const amplitude = 0.6; // sine amplitude; RMS = 0.6/sqrt(2)
+      final noiseAmplitude = amplitude / sqrt(2) * sqrt(3); // match RMS
+      return [
+        ...tone(frequency: 90, seconds: 0.5, amplitude: amplitude),
+        for (var i = 0; i < (0.5 * sampleRate).round(); i++)
+          noiseAmplitude * (random.nextDouble() * 2 - 1),
+      ];
+    }
+
+    test('a brightness sweep gets a rising sharpness curve', () {
+      final pattern = analyzer.analyze(audioFrom(brightnessSweep()));
+      final curve = pattern.curves
+          .where((c) => c.parameter == HapticCurveParameter.sharpnessControl)
+          .single;
+      // Deviations are additive around the event's mean sharpness: dull
+      // opening below the mean, bright ending above it.
+      expect(curve.points.first.value, lessThan(-0.05));
+      expect(curve.points.last.value, greaterThan(0.05));
+
+      // The event's own sharpness sits between the two extremes.
+      final event = pattern.events.whereType<ContinuousEvent>().single;
+      expect(event.sharpness, greaterThan(0.1));
+      expect(event.sharpness, lessThan(0.9));
+    });
+
+    test('a steady tone emits no sharpness curve', () {
+      final pattern = analyzer.analyze(
+        audioFrom(tone(frequency: 80, seconds: 0.5)),
+      );
+      expect(
+        pattern.curves
+            .where((c) => c.parameter == HapticCurveParameter.sharpnessControl),
+        isEmpty,
+      );
+    });
+
+    test('sharpnessCurves: false disables emission', () {
+      final pattern = const AudioAnalyzer(
+        options: AnalysisOptions(sharpnessCurves: false),
+      ).analyze(audioFrom(brightnessSweep()));
+      expect(
+        pattern.curves
+            .where((c) => c.parameter == HapticCurveParameter.sharpnessControl),
+        isEmpty,
+      );
+    });
+
+    test('patterns with sharpness curves are an AHAP encoder fixed point', () {
+      final pattern = analyzer.analyze(audioFrom(brightnessSweep()));
+      final encoded = pattern.toAhapMap();
+      final reEncoded = HapticPattern.fromAhap(pattern.toAhap()).toAhapMap();
+      expect(
+        const DeepCollectionEquality().equals(reEncoded, encoded),
+        isTrue,
+        reason: 'decode(encode(p)) must re-encode identically',
+      );
+    });
   });
 
   test('the pattern renders to both targets without errors', () {
