@@ -1,23 +1,25 @@
 # Changelog
 
-## 0.3.0-dev.2
+## 0.4.0
 
-- The analyzer now emits time-varying **sharpness curves** (iOS): each
+First stable release. From here, stable versions are released from `main`
+and `-dev.N` prereleases track the `dev` branch on pub.dev.
+
+New capabilities:
+
+- Android primitive compositions: `pattern.toPrimitives()` and the
+  `--formats primitives` CLI output map patterns onto
+  `VibrationEffect.Composition` primitives (click/tick/thud/rises/falls/
+  spin) with scales, delays, and a `minApiLevel`.
+- AHAP parsing: `HapticPattern.fromAhap` tolerantly parses `.ahap` files,
+  and the CLI accepts them as inputs — convert existing iOS haptic
+  libraries to Android formats without re-analyzing audio.
+- The analyzer emits time-varying **sharpness curves** (iOS): each
   continuous segment's brightness (zero-crossing rate) is tracked over time
   and encoded as additive `HapticSharpnessControl` deviations around the
   event's sharpness. Curves are only emitted when the brightness actually
   moves; disable with `--no-sharpness-curves` or
   `AnalysisOptions(sharpnessCurves: false)`.
-- Android conversions now report one `curveParameterUnsupported` warning per
-  parameter type (with a count) instead of one per curve.
-- Roadmap: playback and the Flutter companion package were removed; the demo
-  app is the reference integration.
-- Docs: a "Tuning the output" guide mapping symptoms to CLI flags and
-  `AnalysisOptions`, a haptics/sound learning-resources section, and a
-  rewritten example walking through audio conversion, loading `.ahap` files,
-  DSL authoring, and analysis tuning.
-
-## 0.3.0-dev.1
 
 Accuracy fixes for long and complex sounds:
 
@@ -32,15 +34,16 @@ Accuracy fixes for long and complex sounds:
 - Android waveform amplitudes are sampled at step midpoints, removing the
   half-step lag that dulled ramps.
 
-Roadmap features:
+Polish:
 
-- Android primitive compositions: `pattern.toPrimitives()` and the
-  `--formats primitives` CLI output map patterns onto
-  `VibrationEffect.Composition` primitives (click/tick/thud/rises/falls/
-  spin) with scales, delays, and a `minApiLevel`.
-- AHAP parsing: `HapticPattern.fromAhap` tolerantly parses `.ahap` files,
-  and the CLI accepts them as inputs — convert existing iOS haptic
-  libraries to Android formats without re-analyzing audio.
+- Android conversions report one `curveParameterUnsupported` warning per
+  parameter type (with a count) instead of one per curve.
+- Docs: a "Tuning the output" guide mapping symptoms to CLI flags and
+  `AnalysisOptions`, a haptics/sound learning-resources section, and a
+  rewritten example walking through audio conversion, loading `.ahap` files,
+  DSL authoring, and analysis tuning.
+- Roadmap: playback and the Flutter companion package were removed; the demo
+  app is the reference integration.
 
 ## 0.2.0-dev.4
 

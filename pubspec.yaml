@@ -2,7 +2,7 @@ name: haptify
 description: >-
   Generate haptic feedback files from audio: .ahap for iOS Core Haptics plus
   Android waveforms, via a CLI or a composable Dart pattern API.
-version: 0.3.0-dev.2
+version: 0.4.0
 repository: https://github.com/imedboumalek/haptify
 issue_tracker: https://github.com/imedboumalek/haptify/issues
 topics:
