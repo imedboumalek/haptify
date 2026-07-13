@@ -98,6 +98,24 @@ void main() {
           ConversionWarningCode.curveParameterUnsupported);
     });
 
+    test('repeated unsupported curves warn once per parameter type', () {
+      final pattern = HapticPattern(
+        events: [
+          HapticEvent.continuous(at: Duration.zero, duration: 900.ms),
+        ],
+        curves: [
+          HapticCurve.sharpness([const CurvePoint(Duration.zero, 0.5)]),
+          HapticCurve.sharpness([CurvePoint(300.ms, -0.2)]),
+          HapticCurve.sharpness([CurvePoint(600.ms, 0.1)]),
+        ],
+      );
+      final wf = pattern.toWaveform();
+      expect(wf.warnings, hasLength(1));
+      expect(wf.warnings.single.code,
+          ConversionWarningCode.curveParameterUnsupported);
+      expect(wf.warnings.single.message, contains('3 curves'));
+    });
+
     test('overlapping events merge with max and warn', () {
       final pattern = HapticPattern.events([
         HapticEvent.continuous(

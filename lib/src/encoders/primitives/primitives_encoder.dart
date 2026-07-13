@@ -37,15 +37,22 @@ class PrimitivesEncoder {
   /// Renders [pattern] into an ordered primitive composition.
   PrimitiveComposition encode(HapticPattern pattern) {
     final warnings = <ConversionWarning>[];
+    // One warning per unsupported parameter type, not per curve — analyzer
+    // output can carry one sharpness curve per segment.
+    final unsupportedCounts = <HapticCurveParameter, int>{};
     for (final curve in pattern.curves) {
       if (curve.parameter != HapticCurveParameter.intensityControl) {
-        warnings.add(ConversionWarning(
-          ConversionWarningCode.curveParameterUnsupported,
-          'Compositions cannot express ${curve.parameter.name} curves; '
-          'the curve was ignored.',
-        ));
+        unsupportedCounts.update(curve.parameter, (n) => n + 1,
+            ifAbsent: () => 1);
       }
     }
+    unsupportedCounts.forEach((parameter, count) {
+      warnings.add(ConversionWarning(
+        ConversionWarningCode.curveParameterUnsupported,
+        'Compositions cannot express ${parameter.name} curves; '
+        '$count ${count == 1 ? 'curve was' : 'curves were'} ignored.',
+      ));
+    });
     if (pattern.repeatFrom != null) {
       warnings.add(const ConversionWarning(
         ConversionWarningCode.loopUnsupported,
