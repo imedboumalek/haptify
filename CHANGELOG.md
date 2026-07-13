@@ -12,6 +12,10 @@
   parameter type (with a count) instead of one per curve.
 - Roadmap: playback and the Flutter companion package were removed; the demo
   app is the reference integration.
+- Docs: a "Tuning the output" guide mapping symptoms to CLI flags and
+  `AnalysisOptions`, a haptics/sound learning-resources section, and a
+  rewritten example walking through audio conversion, loading `.ahap` files,
+  DSL authoring, and analysis tuning.
 
 ## 0.3.0-dev.1
 
