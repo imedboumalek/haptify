@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0+1
+
+- Add a project banner to the README (renders on GitHub and pub.dev).
+  Docs-only rebuild of 0.4.0.
+
 ## 0.4.0
 
 First stable release. From here, stable versions are released from `main`
