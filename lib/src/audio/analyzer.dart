@@ -22,6 +22,7 @@ class AnalysisOptions {
     this.maxCurvePoints = 32,
     this.curvePointsPerSecond = 16,
     this.gamma = 1.0,
+    this.sharpnessCurves = true,
   });
 
   /// The analysis window; also the time resolution of the output.
@@ -56,6 +57,13 @@ class AnalysisOptions {
   /// Perceptual exponent applied to the normalized envelope
   /// (`intensity = envelope^gamma`). Values below 1.0 boost quiet passages.
   final double gamma;
+
+  /// Whether continuous segments also get a time-varying sharpness curve
+  /// following the sound's brightness (zero-crossing rate) over time.
+  ///
+  /// Only iOS can express sharpness, and a curve is only emitted when the
+  /// brightness actually moves; steady sounds keep a single sharpness value.
+  final bool sharpnessCurves;
 }
 
 /// Turns decoded audio into a [HapticPattern]: transient events at detected
@@ -119,25 +127,26 @@ class AudioAnalyzer {
       if (length < 3) continue;
 
       var peak = 0.0;
-      var zcrSum = 0.0;
       for (var i = segment.start; i < segment.end; i++) {
         peak = max(peak, envelope[i]);
-        zcrSum += frames[i].zeroCrossingRate;
       }
+
+      // Per-frame sharpness, smoothed so a curve spends its point budget on
+      // real brightness changes rather than frame jitter.
+      final sharpnessSeries = _smooth([
+        for (var i = segment.start; i < segment.end; i++)
+          _sharpness(frames[i].zeroCrossingRate),
+      ]);
+      final meanSharpness =
+          sharpnessSeries.reduce((a, b) => a + b) / sharpnessSeries.length;
 
       events.add(HapticEvent.continuous(
         at: frameTime(segment.start),
         duration: frameTime(length),
         intensity: peak.clamp(0.0, 1.0),
-        sharpness: _sharpness(zcrSum / length),
+        sharpness: meanSharpness.clamp(0.0, 1.0),
       ));
 
-      // The intensity curve traces the envelope, normalized so the event's
-      // intensity is the ceiling.
-      final points = <CurvePoint>[
-        for (var i = segment.start; i < segment.end; i++)
-          CurvePoint(frameTime(i), (envelope[i] / peak).clamp(0.0, 1.0)),
-      ];
       // The point budget scales with the segment length so long, complex
       // sounds keep their envelope detail.
       final seconds =
@@ -146,7 +155,32 @@ class AudioAnalyzer {
         options.maxCurvePoints,
         (seconds * options.curvePointsPerSecond).ceil(),
       );
+
+      // The intensity curve traces the envelope, normalized so the event's
+      // intensity is the ceiling.
+      final points = <CurvePoint>[
+        for (var i = segment.start; i < segment.end; i++)
+          CurvePoint(frameTime(i), (envelope[i] / peak).clamp(0.0, 1.0)),
+      ];
       curves.add(HapticCurve.intensity(_simplify(points, budget)));
+
+      // Sharpness curve: additive deviations from the event's sharpness
+      // (AHAP's HapticSharpnessControl semantics), emitted only when the
+      // brightness actually moves over the segment.
+      if (options.sharpnessCurves) {
+        var maxDeviation = 0.0;
+        final sharpnessPoints = <CurvePoint>[];
+        for (var i = 0; i < sharpnessSeries.length; i++) {
+          final deviation =
+              (sharpnessSeries[i] - meanSharpness).clamp(-1.0, 1.0);
+          maxDeviation = max(maxDeviation, deviation.abs());
+          sharpnessPoints
+              .add(CurvePoint(frameTime(segment.start + i), deviation));
+        }
+        if (maxDeviation >= _minSharpnessDeviation) {
+          curves.add(HapticCurve.sharpness(_simplify(sharpnessPoints, budget)));
+        }
+      }
     }
 
     return HapticPattern(events: events, curves: curves);
@@ -261,6 +295,27 @@ class AudioAnalyzer {
   /// near 0, noise and bright transients near 1.
   static double _sharpness(double zeroCrossingRate) =>
       sqrt((zeroCrossingRate / 0.5).clamp(0.0, 1.0));
+
+  /// A sharpness swing smaller than this is treated as steady: no curve is
+  /// emitted, keeping files small and Android conversions warning-free.
+  static const double _minSharpnessDeviation = 0.08;
+
+  /// Centered moving average over a five-sample window.
+  static List<double> _smooth(List<double> values) {
+    if (values.length < 3) return values;
+    const half = 2;
+    final smoothed = List<double>.filled(values.length, 0);
+    for (var i = 0; i < values.length; i++) {
+      final lo = max(0, i - half);
+      final hi = min(values.length, i + half + 1);
+      var sum = 0.0;
+      for (var j = lo; j < hi; j++) {
+        sum += values[j];
+      }
+      smoothed[i] = sum / (hi - lo);
+    }
+    return smoothed;
+  }
 
   /// Ramer–Douglas–Peucker curve simplification fitted to [maxPoints].
   ///

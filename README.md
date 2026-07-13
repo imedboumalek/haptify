@@ -91,6 +91,9 @@ haptify convert [audio files, globs, or folders] [options]
                            (default 1.0)
     --silence-threshold    Level under which audio counts as silence
                            (default 0.02)
+    --[no-]sharpness-curves
+                           Emit time-varying sharpness curves (iOS); on by
+                           default, disable to shrink files
 -v, --verbose              Print analysis details and conversion warnings
 ```
 
@@ -114,6 +117,35 @@ lib/generated/hit_haptic.dart
 a bare `haptify convert` inside a sounds folder writes into that folder.)
 Pass `-o some/dir` to put everything flat into one directory instead.
 
+## Tuning the output
+
+The defaults suit typical sound effects. When the result doesn't feel right,
+adjust by symptom — run with `-v` to see what the analyzer found:
+
+| Symptom | Knob | Direction |
+|---|---|---|
+| Missing taps on drum hits / percussive detail | `--onset-sensitivity` (1.5) | Lower it (e.g. 1.0–1.2) — detects softer onsets |
+| Too many taps, feels like machine-gun buzzing | `--onset-sensitivity` / `--min-gap` (50ms) | Raise sensitivity, or raise the gap to space taps out |
+| Quiet passages barely vibrate | `--gamma` (1.0) | Lower it (e.g. 0.6–0.8) — boosts quiet parts perceptually |
+| Loud parts feel flat / everything at max | `--gamma` | Raise it above 1.0 — spreads the dynamic range down |
+| Background hiss triggers haptics | `--silence-threshold` (0.02) | Raise it — more audio counts as silence |
+| Trailing tails / reverb get cut off | `--silence-threshold` | Lower it |
+| Long clips feel mushy, envelope detail lost | `--curve-rate` (16/s) | Raise it (e.g. 32) — more curve points per second |
+| Files too big for very long audio | `--curve-rate` / `--no-sharpness-curves` | Lower the rate; drop sharpness curves (Android ignores them anyway) |
+| Haptics feel coarse / stair-steppy on Android | `--resolution` (10ms) | Lower it (min 1ms) — finer waveform steps, bigger arrays |
+
+Every flag has a library counterpart on `AnalysisOptions` with the same
+name in camelCase (`onsetSensitivity`, `minOnsetGap`, `gamma`,
+`silenceThreshold`, `curvePointsPerSecond`, `maxCurvePoints`,
+`sharpnessCurves`, `frameSize`), so runtime conversions tune identically:
+
+```dart
+const analyzer = AudioAnalyzer(
+  options: AnalysisOptions(onsetSensitivity: 1.2, gamma: 0.7),
+);
+final pattern = analyzer.analyzeBytes(bytes);
+```
+
 ## How it works
 
 1. **Decode** the audio to mono samples (MP3 decoding is built in via a
@@ -121,7 +153,8 @@ Pass `-o some/dir` to put everything flat into one directory instead.
    and LAME gapless trimming so timing matches the original audio).
 2. **Analyze**: an RMS loudness envelope is computed per frame; energy-flux
    onset detection finds percussive hits; the zero-crossing rate estimates
-   how *sharp* each moment feels.
+   how *sharp* each moment feels — emitted as a time-varying sharpness curve
+   on iOS when the brightness moves.
 3. **Model**: hits become transient haptic events, sustained passages become
    continuous events shaped by an intensity curve (simplified with
    Ramer-Douglas-Peucker to stay compact).
@@ -186,6 +219,11 @@ final wf = pattern.toWaveform();    // Android: Vibration.vibrate(
 the UI thread free. Need the decoded samples separately? Call
 `decodeAudioBytes(bytes)` to get `AudioData`, then `analyze` it.
 
+Runtime conversion is the exact same pipeline as the CLI — same analyzer,
+same defaults. Improvements like time-varying sharpness curves and
+duration-scaled envelope budgets apply to uploaded audio automatically, no
+app changes needed.
+
 ## Demo app
 
 The repository contains a Flutter demo app under
@@ -200,13 +238,42 @@ with `cd example_app && flutter run`.
   shipped as the `primitives` output format
 - ~~AHAP parsing (`HapticPattern.fromAhap`)~~ — shipped; `.ahap` files
   convert directly to the Android formats
+- ~~Analyzer sharpness curves (iOS)~~ — shipped; sharpness follows the
+  sound's brightness over time
 - Preset patterns and an easing/curve library for hand-authoring
-- Optional Flutter companion package with playback glue for
-  gaimon / vibration
 
-Audio-to-haptic generation is built in; playback itself (platform channels)
-stays out of scope: haptify authors patterns, your playback plugin plays
-them.
+## Learn more: haptics & sound
+
+Design guidance:
+
+- [Apple HIG — Playing haptics](https://developer.apple.com/design/human-interface-guidelines/playing-haptics)
+  — when haptics help, when they annoy, and how to pair them with sound
+- [Android — Haptics design principles](https://developer.android.com/develop/ui/views/haptics/haptics-principles)
+  — the Android side of the same story, including the clear/rich/buzzy scale
+
+Platform APIs this package targets:
+
+- [Core Haptics](https://developer.apple.com/documentation/corehaptics) and
+  [Representing haptic patterns in AHAP files](https://developer.apple.com/documentation/corehaptics/representing-haptic-patterns-in-ahap-files)
+  — the AHAP format haptify emits and parses
+- [Android `VibrationEffect`](https://developer.android.com/reference/android/os/VibrationEffect)
+  — `createWaveform` (our waveform JSON) and `startComposition` (our
+  primitives JSON)
+
+Talks & courses:
+
+- WWDC19 — [Introducing Core Haptics](https://developer.apple.com/videos/play/wwdc2019/520/)
+  (intensity/sharpness model, transients vs. continuous)
+- WWDC21 — [Practice audio haptic design](https://developer.apple.com/videos/play/wwdc2021/10278/)
+  (designing haptics *from* sound — exactly what haptify automates)
+- Coursera — [Audio Signal Processing for Music Applications](https://www.coursera.org/learn/audio-signal-processing)
+  (UPF/Stanford; the DSP behind envelopes, onsets, and spectral features)
+- [The Scientist and Engineer's Guide to DSP](https://www.dspguide.com/)
+  — free classic; chapters on convolution and the DFT explain what the
+  analyzer's RMS/ZCR heuristics approximate
+- [musicinformationretrieval.com](https://musicinformationretrieval.com/)
+  — notebooks on onset detection and audio features, directly relevant to
+  how `AudioAnalyzer` works
 
 ## License
 

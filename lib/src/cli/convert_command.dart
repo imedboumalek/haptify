@@ -84,6 +84,12 @@ class ConvertCommand extends Command<int> {
         help: 'Envelope level under which audio counts as silence (0-1).',
       )
       ..addFlag(
+        'sharpness-curves',
+        defaultsTo: true,
+        help: 'Emit time-varying sharpness curves following the sound\'s '
+            'brightness (iOS only); --no-sharpness-curves shrinks files.',
+      )
+      ..addFlag(
         'verbose',
         abbr: 'v',
         negatable: false,
@@ -132,6 +138,7 @@ class ConvertCommand extends Command<int> {
       gamma: _doubleArg(args.option('gamma')!, 'gamma'),
       silenceThreshold:
           _doubleArg(args.option('silence-threshold')!, 'silence-threshold'),
+      sharpnessCurves: args.flag('sharpness-curves'),
     );
 
     var failures = 0;

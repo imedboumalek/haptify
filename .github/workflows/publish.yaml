@@ -3,6 +3,9 @@ name: Publish to pub.dev
 on:
   push:
     tags: ['v[0-9]+.[0-9]+.[0-9]+*']
+  # Dispatched on a tag ref by dev-release.yaml (tags pushed with
+  # GITHUB_TOKEN do not fire tag-push workflows themselves).
+  workflow_dispatch:
 
 jobs:
   publish:
