@@ -1,5 +1,7 @@
 # haptify
 
+![haptify — audio to haptics for iOS and Android, from the CLI or on-device at runtime](doc/haptify_banner.png)
+
 Generate haptic feedback files from audio, in pure Dart.
 
 > **Dev preview.** haptify is published as a prerelease: the CLI and library
