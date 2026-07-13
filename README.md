@@ -200,13 +200,9 @@ with `cd example_app && flutter run`.
   shipped as the `primitives` output format
 - ~~AHAP parsing (`HapticPattern.fromAhap`)~~ — shipped; `.ahap` files
   convert directly to the Android formats
+- Analyzer sharpness curves (iOS): time-varying sharpness that follows the
+  sound's brightness
 - Preset patterns and an easing/curve library for hand-authoring
-- Optional Flutter companion package with playback glue for
-  gaimon / vibration
-
-Audio-to-haptic generation is built in; playback itself (platform channels)
-stays out of scope: haptify authors patterns, your playback plugin plays
-them.
 
 ## License
 
