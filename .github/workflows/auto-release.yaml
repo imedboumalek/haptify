@@ -1,0 +1,69 @@
+name: Auto release
+
+# Automated publishing from the two long-lived branches:
+#   * push to main -> publish the pubspec version as a STABLE release.
+#   * push to dev  -> publish a PRERELEASE: the pubspec's X.Y.Z with -dev.N
+#     appended (N auto-incremented from existing tags), so prerelease numbers
+#     are never hand-edited.
+#
+# The pubspec holds the target X.Y.Z (plus any +build). A push whose resulting
+# tag already exists is a no-op, so main pushes that don't change the version
+# (docs, chores) publish nothing — only a version bump releases. Actual upload
+# runs in publish.yaml, dispatched here on the new tag ref.
+on:
+  push:
+    branches: [dev, main]
+
+permissions:
+  contents: write # create the release tag (and, for dev, the release commit)
+  actions: write # dispatch the publish workflow on the tag ref
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history + tags, needed to number dev prereleases
+      - name: Tag and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          raw="$(sed -n 's/^version: *//p' pubspec.yaml)"
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then
+            # Stable: publish the pubspec version verbatim (keeps any +build).
+            version="$raw"
+          else
+            # Prerelease: reduce to X.Y.Z, then append -dev.<highest N + 1>.
+            base="${raw%%-*}"; base="${base%%+*}"
+            n="$(git tag -l "v${base}-dev.*" | sed 's/.*-dev\.//' \
+                  | grep -E '^[0-9]+$' | sort -n | tail -1 || true)"
+            version="${base}-dev.$(( ${n:-0} + 1 ))"
+          fi
+          tag="v${version}"
+
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" >/dev/null 2>&1; then
+            echo "Tag ${tag} already exists; nothing to publish."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # pub.dev requires the tag to equal v<pubspec version>, so the tagged
+          # commit's pubspec must state the exact version. On main it already
+          # matches; on dev, synthesize a release commit carrying -dev.N (the
+          # tag references it; the dev branch itself is left untouched, so this
+          # does not re-trigger the workflow).
+          if [ "${version}" != "${raw}" ]; then
+            sed -i "s/^version: .*/version: ${version}/" pubspec.yaml
+            git commit -aqm "Release ${version}"
+          fi
+          git tag "${tag}"
+          git push origin "${tag}"
+
+          # Tags pushed with GITHUB_TOKEN don't fire tag-push workflows, so
+          # dispatch the publish workflow on the tag ref explicitly.
+          gh workflow run publish.yaml --ref "${tag}"
