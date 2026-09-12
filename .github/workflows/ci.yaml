@@ -50,8 +50,18 @@ jobs:
       # The push trigger is already limited to dev/main, so the branch test
       # is belt-and-braces — it keeps this scoped if that list ever grows.
       - name: Build release APK
+        id: apk
         if: github.event_name == 'push' && (github.ref_name == 'dev' || github.ref_name == 'main')
-        run: flutter build apk --release
+        run: |
+          set -euo pipefail
+          # The package version, not example_app's own — it's what identifies
+          # the build, and it matches how release assets are named.
+          version="$(sed -n 's/^version: *//p' ../pubspec.yaml)"
+          name="haptify-demo-v${version}"
+          flutter build apk --release
+          mv build/app/outputs/flutter-apk/app-release.apk \
+             "build/app/outputs/flutter-apk/${name}.apk"
+          echo "name=${name}" >> "$GITHUB_OUTPUT"
       # Downloadable test build for every dev/main commit, so trying a
       # demo-app change on a real device doesn't mean waiting for a package
       # release. No version overrides: this keeps example_app's own pubspec
@@ -62,7 +72,10 @@ jobs:
         if: github.event_name == 'push' && (github.ref_name == 'dev' || github.ref_name == 'main')
         uses: actions/upload-artifact@v4
         with:
-          name: haptify-demo-apk-${{ github.sha }}
-          path: example_app/build/app/outputs/flutter-apk/app-release.apk
+          # Named for the version, so a downloaded build is identifiable
+          # without cross-referencing a commit hash. uses: steps ignore
+          # defaults.run.working-directory, hence the example_app/ prefix.
+          name: ${{ steps.apk.outputs.name }}
+          path: example_app/build/app/outputs/flutter-apk/${{ steps.apk.outputs.name }}.apk
           retention-days: 14
           if-no-files-found: error
