@@ -68,6 +68,20 @@ jobs:
           # does not re-trigger the workflow).
           if [ "${version}" != "${raw}" ]; then
             sed -i "s/^version: .*/version: ${version}/" pubspec.yaml
+
+            # publish.yaml gates on `dart pub publish --dry-run`, which exits
+            # NON-ZERO when CHANGELOG.md doesn't mention the exact version
+            # being published — a missing -dev.N section silently blocks every
+            # prerelease. Give it one here, in the same tag-only commit as the
+            # pubspec edit above: neither dev nor main ever carries this, so
+            # the changelog humans read stays free of -dev.N noise.
+            {
+              head -1 CHANGELOG.md
+              printf '\n## %s\n\nPrerelease of %s.\n' "${version}" "${version%%-*}"
+              tail -n +2 CHANGELOG.md
+            } > CHANGELOG.next
+            mv CHANGELOG.next CHANGELOG.md
+
             git commit -aqm "Release ${version}"
           fi
           git tag "${tag}"
