@@ -35,6 +35,26 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true # offsets the release build added below
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+      # Build the APK on every run, not just on release. The demo app depends
+      # on the package by path, so a change under lib/ breaks it exactly as
+      # easily as a change under example_app/ — and analyze/test never touch
+      # the Android toolchain, where the failures actually happen (Gradle,
+      # plugins, minification). Release, not debug: it's what ships, and
+      # shrinking is where things break.
+      - run: flutter build apk --release
+      # Downloadable test build for every commit, so trying a demo-app change
+      # on a real device doesn't mean waiting for a package release. No
+      # version overrides: this keeps example_app's own pubspec versionCode
+      # (1), which never exceeds the release APK's github.run_number-derived
+      # one, so a real release installs over a CI build rather than being
+      # refused as a downgrade.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: haptify-demo-apk-${{ github.sha }}
+          path: example_app/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 14
+          if-no-files-found: error
