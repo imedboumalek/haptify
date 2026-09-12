@@ -35,6 +35,47 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true # offsets the release build added below
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+      # Build the APK on pushes to dev and main only — NOT on feat/* PRs,
+      # where the Gradle build would add minutes to every review cycle.
+      # The demo app depends on the package by path, so a change under lib/
+      # breaks it exactly as easily as a change under example_app/, and
+      # analyze/test above never touch the Android toolchain, where the
+      # failures actually happen (Gradle, plugins, minification). Release,
+      # not debug: it's what ships, and shrinking is where things break.
+      #
+      # The push trigger is already limited to dev/main, so the branch test
+      # is belt-and-braces — it keeps this scoped if that list ever grows.
+      - name: Build release APK
+        id: apk
+        if: github.event_name == 'push' && (github.ref_name == 'dev' || github.ref_name == 'main')
+        run: |
+          set -euo pipefail
+          # The package version, not example_app's own — it's what identifies
+          # the build, and it matches how release assets are named.
+          version="$(sed -n 's/^version: *//p' ../pubspec.yaml)"
+          name="haptify-demo-v${version}"
+          flutter build apk --release
+          mv build/app/outputs/flutter-apk/app-release.apk \
+             "build/app/outputs/flutter-apk/${name}.apk"
+          echo "name=${name}" >> "$GITHUB_OUTPUT"
+      # Downloadable test build for every dev/main commit, so trying a
+      # demo-app change on a real device doesn't mean waiting for a package
+      # release. No version overrides: this keeps example_app's own pubspec
+      # versionCode (1), which never exceeds the release APK's
+      # github.run_number-derived one, so a real release installs over a CI
+      # build rather than being refused as a downgrade.
+      - name: Upload the demo APK
+        if: github.event_name == 'push' && (github.ref_name == 'dev' || github.ref_name == 'main')
+        uses: actions/upload-artifact@v4
+        with:
+          # Named for the version, so a downloaded build is identifiable
+          # without cross-referencing a commit hash. uses: steps ignore
+          # defaults.run.working-directory, hence the example_app/ prefix.
+          name: ${{ steps.apk.outputs.name }}
+          path: example_app/build/app/outputs/flutter-apk/${{ steps.apk.outputs.name }}.apk
+          retention-days: 14
+          if-no-files-found: error

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0
+
+- Each stable release now carries a prebuilt Android APK of the demo app on
+  its GitHub release page — try the haptics on a device without cloning and
+  building the repo.
+
 ## 0.4.0+1
 
 - Add a project banner to the README (renders on GitHub and pub.dev).

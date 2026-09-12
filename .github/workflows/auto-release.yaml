@@ -1,0 +1,179 @@
+name: Auto release
+
+# Automated publishing from the two long-lived branches:
+#   * push to main -> publish the pubspec version as a STABLE release.
+#   * push to dev  -> publish a PRERELEASE: the pubspec's X.Y.Z with -dev.N
+#     appended (N auto-incremented from existing tags), so prerelease numbers
+#     are never hand-edited.
+#
+# The pubspec holds the target X.Y.Z (plus any +build). A push whose resulting
+# tag already exists is a no-op, so main pushes that don't change the version
+# (docs, chores) publish nothing — only a version bump releases. Actual upload
+# runs in publish.yaml, dispatched here on the new tag ref.
+#
+# Stable releases additionally get a GitHub Release: this workflow opens it as
+# a draft with the matching CHANGELOG section, then demo-app-release builds
+# example_app and publishes the release with the APK attached. Prereleases are
+# unaffected — they stay tag + pub.dev only.
+on:
+  push:
+    branches: [dev, main]
+
+permissions:
+  contents: write # create the release tag (and, for dev, the release commit)
+  actions: write # dispatch the publish workflow on the tag ref
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      # Set only when a new STABLE tag was cut from main; gates demo-app-release.
+      new_stable_tag: ${{ steps.tag.outputs.new_stable_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history + tags, needed to number dev prereleases
+      - name: Tag and publish
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          raw="$(sed -n 's/^version: *//p' pubspec.yaml)"
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then
+            # Stable: publish the pubspec version verbatim (keeps any +build).
+            version="$raw"
+          else
+            # Prerelease: reduce to X.Y.Z, then append -dev.<highest N + 1>.
+            base="${raw%%-*}"; base="${base%%+*}"
+            n="$(git tag -l "v${base}-dev.*" | sed 's/.*-dev\.//' \
+                  | grep -E '^[0-9]+$' | sort -n | tail -1 || true)"
+            version="${base}-dev.$(( ${n:-0} + 1 ))"
+          fi
+          tag="v${version}"
+
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" >/dev/null 2>&1; then
+            echo "Tag ${tag} already exists; nothing to publish."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # pub.dev requires the tag to equal v<pubspec version>, so the tagged
+          # commit's pubspec must state the exact version. On main it already
+          # matches; on dev, synthesize a release commit carrying -dev.N (the
+          # tag references it; the dev branch itself is left untouched, so this
+          # does not re-trigger the workflow).
+          if [ "${version}" != "${raw}" ]; then
+            sed -i "s/^version: .*/version: ${version}/" pubspec.yaml
+
+            # publish.yaml gates on `dart pub publish --dry-run`, which exits
+            # NON-ZERO when CHANGELOG.md doesn't mention the exact version
+            # being published — a missing -dev.N section silently blocks every
+            # prerelease. Give it one here, in the same tag-only commit as the
+            # pubspec edit above: neither dev nor main ever carries this, so
+            # the changelog humans read stays free of -dev.N noise.
+            {
+              head -1 CHANGELOG.md
+              printf '\n## %s\n\nPrerelease of %s.\n' "${version}" "${version%%-*}"
+              tail -n +2 CHANGELOG.md
+            } > CHANGELOG.next
+            mv CHANGELOG.next CHANGELOG.md
+
+            git commit -aqm "Release ${version}"
+          fi
+          git tag "${tag}"
+          git push origin "${tag}"
+
+          # Tags pushed with GITHUB_TOKEN don't fire tag-push workflows, so
+          # dispatch the publish workflow on the tag ref explicitly.
+          gh workflow run publish.yaml --ref "${tag}"
+
+          # Stable only: open a GitHub Release for the tag. Dev prereleases
+          # stay tag + pub.dev only, matching the "no CHANGELOG entry per
+          # -dev.N" convention.
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then
+            # Body = the "## <version>" CHANGELOG section. Substring match,
+            # not a regex: versions can carry "+" (0.4.0+1), which is a regex
+            # metacharacter. The trailing check keeps "## 0.4.0" from matching
+            # the "## 0.4.0+1" heading.
+            notes="$(awk -v ver="## ${version}" '
+              index($0, ver) == 1 &&
+              (length($0) == length(ver) || substr($0, length(ver)+1, 1) == " ") { found=1; next }
+              found && /^## / { exit }
+              found { print }
+            ' CHANGELOG.md)"
+
+            if [ -z "$(printf '%s' "$notes" | tr -d '[:space:]')" ]; then
+              notes="Release ${version}."
+            fi
+
+            notes_file="$(mktemp)"
+            printf '%s\n' "$notes" > "$notes_file"
+
+            # Draft until demo-app-release attaches the APK and publishes it,
+            # so a failed Flutter build never leaves a public, asset-less
+            # release on the page — just a draft a re-run can finish.
+            gh release create "${tag}" \
+              --title "${version}" \
+              --notes-file "$notes_file" \
+              --draft
+
+            echo "new_stable_tag=${tag}" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Builds the Flutter demo app and attaches it to the stable release opened
+  # above. Skipped for dev pushes and for main pushes that didn't bump the
+  # version (the release job exits before setting the output in both cases),
+  # and skipped by default if the release job failed.
+  demo-app-release:
+    needs: release
+    if: needs.release.outputs.new_stable_tag != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # upload the release asset; no workflow dispatch here
+    defaults:
+      run:
+        working-directory: example_app
+    env:
+      TAG: ${{ needs.release.outputs.new_stable_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The tag, not github.sha: on dev the tagged commit is a synthesized
+          # release commit that isn't the pushed one. Harmless on main, correct
+          # everywhere.
+          ref: ${{ needs.release.outputs.new_stable_tag }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - name: Build release APK
+        run: |
+          set -euo pipefail
+
+          version="${TAG#v}"
+          # --build-name must be a bare X.Y.Z (Flutter validates it; it also
+          # feeds iOS's CFBundleShortVersionString, which Apple requires in
+          # that shape), so drop any +build for this ONE flag — same reason
+          # the release job above uses ${raw%%+*}. Nothing else is stripped:
+          # the tag, the release title, and the APK filename below all carry
+          # the full version string, +build included.
+          build_name="${version%%+*}"
+          # run_number keeps Android versionCode strictly increasing without
+          # touching example_app's own (independent) pubspec version.
+          flutter build apk --release \
+            --build-name="${build_name}" \
+            --build-number="${{ github.run_number }}"
+      - name: Attach the APK and publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          dest="haptify-demo-${TAG}.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "$dest"
+          gh release upload "${TAG}" "$dest"
+          gh release edit "${TAG}" --draft=false
