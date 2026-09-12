@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0-dev.2
+
+Prerelease of 0.5.0.
+
 ## 0.5.0
 
 - Each stable release now carries a prebuilt Android APK of the demo app on
